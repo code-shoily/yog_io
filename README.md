@@ -8,6 +8,7 @@ Graph file format I/O for the [yog](https://hex.pm/packages/yog) graph library. 
 ## Features
 
 - **GraphML Support** - Full XML-based graph format support compatible with Gephi, yEd, Cytoscape, and NetworkX
+- **Gephi-Optimized** - Typed attributes (int, double, boolean) for proper Gephi visualizations and analysis
 - **GDF Support** - Simple CSV-like format used by Gephi and GUESS
 - **Custom Attributes** - Map your domain types to graph attributes with custom mappers
 - **JS Compatible** - Uses `xmlm` for XML parsing and `simplifile` for file operations
@@ -87,6 +88,8 @@ Use custom attribute mappers to serialize your domain types:
 
 ```gleam
 import gleam/dict
+import gleam/int
+import gleam/result
 import yog/model.{Directed}
 import yog_io/graphml
 
@@ -116,16 +119,16 @@ let assert Ok(graph) =
 // Define attribute mappers
 let node_attr = fn(person: Person) {
   dict.from_list([
-    ("name", person.name),
-    ("age", int.to_string(person.age)),
-    ("role", person.role),
+    #("name", person.name),
+    #("age", int.to_string(person.age)),
+    #("role", person.role),
   ])
 }
 
 let edge_attr = fn(rel: Relationship) {
   dict.from_list([
-    ("kind", rel.kind),
-    ("strength", int.to_string(rel.strength)),
+    #("kind", rel.kind),
+    #("strength", int.to_string(rel.strength)),
   ])
 }
 
@@ -138,7 +141,7 @@ let node_folder = fn(attrs) {
     name: dict.get(attrs, "name") |> result.unwrap(""),
     age: dict.get(attrs, "age")
       |> result.unwrap("0")
-      |> int.parse
+      |> int.parse()
       |> result.unwrap(0),
     role: dict.get(attrs, "role") |> result.unwrap(""),
   )
@@ -149,7 +152,7 @@ let edge_folder = fn(attrs) {
     kind: dict.get(attrs, "kind") |> result.unwrap(""),
     strength: dict.get(attrs, "strength")
       |> result.unwrap("0")
-      |> int.parse
+      |> int.parse()
       |> result.unwrap(0),
   )
 }
@@ -157,6 +160,60 @@ let edge_folder = fn(attrs) {
 let assert Ok(loaded) =
   graphml.deserialize_with(node_folder, edge_folder, xml)
 ```
+
+#### Gephi Compatibility
+
+For use with [Gephi](https://gephi.org/), use typed attributes to enable proper numeric visualizations, weighted layouts, and statistical analysis:
+
+```gleam
+import gleam/dict
+import gleam/float
+import gleam/int
+import yog/model.{Directed}
+import yog_io/graphml.{DoubleType, IntType, StringType}
+
+type Person {
+  Person(name: String, age: Int, influence: Float)
+}
+
+let graph =
+  model.new(Directed)
+  |> model.add_node(1, Person("Alice", 30, 0.85))
+  |> model.add_node(2, Person("Bob", 25, 0.92))
+
+let assert Ok(graph) = model.add_edge(graph, from: 1, to: 2, with: 5.0)
+
+// Map to typed attributes for Gephi
+let node_attrs = fn(p: Person) {
+  dict.from_list([
+    #("label", #(p.name, StringType)),
+    #("age", #(int.to_string(p.age), IntType)),
+    #("influence", #(float.to_string(p.influence), DoubleType)),
+  ])
+}
+
+let edge_attrs = fn(weight: Float) {
+  dict.from_list([
+    #("weight", #(float.to_string(weight), DoubleType)),
+  ])
+}
+
+// Write with proper types for Gephi
+let assert Ok(Nil) = graphml.write_with_types(
+  "graph.graphml",
+  node_attrs,
+  edge_attrs,
+  graph,
+)
+```
+
+With typed attributes, Gephi can:
+- Size/color nodes by numeric attributes (age, influence)
+- Use edge weights in layouts (ForceAtlas2)
+- Filter by numeric ranges
+- Run statistical analysis
+
+See [GEPHI.md](GEPHI.md) for complete Gephi compatibility guide.
 
 ### GDF Format
 
@@ -235,6 +292,8 @@ let gdf_string = gdf.serialize_with(node_attr, edge_attr, options, graph)
 - ✅ Nodes with custom attributes
 - ✅ Edges with custom attributes
 - ✅ Directed and undirected graphs
+- ✅ Typed attributes (string, int, float, double, boolean, long)
+- ✅ Gephi-compatible numeric attributes
 - ✅ XML escaping
 - ✅ Custom serialization options
 

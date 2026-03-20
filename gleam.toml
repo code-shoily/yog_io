@@ -9,9 +9,9 @@ links = [{ title = "Website", href = "https://github.com/code-shoily/yog_io" }]
 [dependencies]
 gleam_stdlib = ">= 0.69.0 and < 1.0.0"
 gleam_regexp = ">= 1.0.0 and < 2.0.0"
-yog = { path = "../yog" }
 simplifile = ">= 1.0.0 and < 3.0.0"
 xmlm = ">= 1.0.1 and < 2.0.0"
+yog = ">= 5.0.0 and < 6.0.0"
 
 [dev_dependencies]
 gleeunit = ">= 1.0.0 and < 2.0.0"
