@@ -71,4 +71,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - GraphML format follows the [GraphML Specification](http://graphml.graphdrawing.org/specification.html)
 - GDF format follows the [Gephi GDF format](https://gephi.org/users/supported-graph-formats/gdf-format/)
 
-[1.0.0]: https://github.com/code-shoily/yog_io/releases/tag/v1.0.0
+[0.5.0]: https://github.com/code-shoily/yog_io/releases/tag/v0.5.0
