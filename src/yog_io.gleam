@@ -3,6 +3,7 @@
 //// Provides serialization and deserialization support for popular graph file formats:
 //// - **GraphML** - XML-based format supported by Gephi, yEd, Cytoscape, and NetworkX
 //// - **GDF** - Simple CSV-like format used by Gephi
+//// - **TGF** - Trivial Graph Format, a simple text format for quick exchange
 //// - **JSON** - Multiple formats for web visualization libraries (D3.js, Cytoscape.js, vis.js, etc.)
 ////
 //// ## Quick Start
@@ -33,6 +34,7 @@
 ////
 //// - **`yog_io/graphml`** - Full-featured GraphML support with custom attribute mappers
 //// - **`yog_io/gdf`** - GDF format support with custom attribute mappers
+//// - **`yog_io/tgf`** - TGF format support with custom label functions
 ////
 //// For more control over serialization, use the submodules directly.
 
@@ -43,6 +45,7 @@ import yog/model.{type Graph}
 import yog_io/gdf
 import yog_io/graphml
 import yog_io/json
+import yog_io/tgf
 
 // Re-export types
 pub type NodeAttributes =
@@ -68,6 +71,12 @@ pub type GraphMLOptions =
 
 pub type GdfOptions =
   gdf.GdfOptions
+
+pub type TgfOptions(n, e) =
+  tgf.TgfOptions(n, e)
+
+pub type TgfError =
+  tgf.TgfError
 
 pub type JsonFormat =
   json.JsonFormat
@@ -193,6 +202,11 @@ pub fn default_gdf_options() -> GdfOptions {
   gdf.default_options()
 }
 
+/// Default options for TGF serialization.
+pub fn default_tgf_options() -> tgf.TgfOptions(String, String) {
+  tgf.default_options()
+}
+
 /// Default options for JSON export.
 pub fn default_json_options() -> JsonExportOptions(String, String) {
   json.default_export_options()
@@ -315,4 +329,79 @@ pub fn write_visjs_json(
       metadata: option.None,
     )
   json.to_json_file(graph, path, options)
+}
+
+// =============================================================================
+// TGF FUNCTIONS
+// =============================================================================
+
+/// Reads a graph from a TGF file.
+///
+/// This is a convenience function that reads node and edge data as strings.
+/// For custom data types, use `tgf.read_with`.
+///
+/// ## Example
+///
+/// ```gleam
+/// import yog/model.{Directed}
+///
+/// case yog_io.read_tgf("graph.tgf", Directed) {
+///   Ok(tgf.TgfResult(graph, warnings)) -> {
+///     // Use the graph
+///     process_graph(graph)
+///   }
+///   Error(e) -> handle_error(e)
+/// }
+/// ```
+pub fn read_tgf(
+  path: String,
+  graph_type: model.GraphType,
+) -> Result(tgf.TgfResult(String, String), tgf.TgfError) {
+  tgf.read(path, graph_type)
+}
+
+/// Writes a graph to a TGF file.
+///
+/// This is a convenience function for graphs with string data.
+/// For custom data types, use `tgf.write_with`.
+///
+/// ## Example
+///
+/// ```gleam
+/// import yog/model.{Directed}
+///
+/// let graph =
+///   model.new(Directed)
+///   |> model.add_node(1, "Alice")
+///   |> model.add_node(2, "Bob")
+///
+/// let assert Ok(graph) = model.add_edge(graph, from: 1, to: 2, with: "follows")
+///
+/// let assert Ok(Nil) = yog_io.write_tgf("graph.tgf", graph)
+/// ```
+pub fn write_tgf(
+  path: String,
+  graph: Graph(String, String),
+) -> Result(Nil, simplifile.FileError) {
+  tgf.write(path, graph)
+}
+
+/// Converts a graph to a TGF string.
+///
+/// This is a convenience function for graphs with string data.
+///
+/// ## Example
+///
+/// ```gleam
+/// import yog/model.{Directed}
+///
+/// let graph =
+///   model.new(Directed)
+///   |> model.add_node(1, "Alice")
+///   |> model.add_node(2, "Bob")
+///
+/// let tgf_string = yog_io.to_tgf(graph)
+/// ```
+pub fn to_tgf(graph: Graph(String, String)) -> String {
+  tgf.serialize(graph)
 }
