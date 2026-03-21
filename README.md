@@ -574,6 +574,50 @@ edgedef>node1 VARCHAR,node2 VARCHAR,directed BOOLEAN,label VARCHAR
 }
 ```
 
+## Future Enhancements
+
+The following formats and features are planned for future releases:
+
+### MultiGraph Support (JSON)
+
+Support for graphs with multiple parallel edges between the same pair of nodes.
+
+- **Target:** v0.7
+- **Status:** Planned
+- **Details:** Extend JSON module to support `yog/multi/model.MultiGraph` with edge IDs
+
+### LEDA Format (.gw, .lgr)
+
+Native format of the LEDA (Library of Efficient Data types and Algorithms) library.
+
+- **Target:** v0.9
+- **Status:** Planned
+- **Use Cases:** Computational geometry research, NetworkX interoperability
+- **Features:** Text-based, supports node/edge data, directed and undirected graphs
+
+### Pajek Format (.net)
+
+Standard format for social network analysis.
+
+- **Target:** v0.8
+- **Status:** Under consideration
+- **Use Cases:** Social network analysis, network science research
+- **Features:** Node attributes, edge weights, partition support
+
+### TGF (Trivial Graph Format)
+
+Simple text-based format for basic graph exchange.
+
+- **Target:** v0.7
+- **Status:** Under consideration
+- **Use Cases:** Simple graph exchange, human-readable format
+- **Features:** Minimal syntax, easy to parse and write
+
+### Other Formats Under Consideration
+
+- **GEXF** - Gephi Exchange Format (XML-based, dynamic graphs)
+- **Graph6/Sparse6** - Compact encoding for graph theory research (low priority due to complexity)
+
 ## Development
 
 ```sh
