@@ -291,6 +291,8 @@ let gdf_string = gdf.serialize_with(node_attr, edge_attr, options, graph)
 
 JSON format export for web visualization libraries and data exchange. Supports multiple format presets for popular visualization tools.
 
+**Note:** The JSON module is currently write-only. Import/read functionality is not implemented. For bidirectional I/O, consider using GraphML, GDF, TGF, LEDA, or Pajek formats.
+
 ```gleam
 import yog/model.{Directed}
 import yog_io/json
@@ -305,11 +307,14 @@ let assert Ok(graph) =
 // Export to JSON string with default options
 let json_string = json.to_json(graph, json.default_export_options())
 
-// Export to file
-let assert Ok(Nil) = json.to_json_file(
-  graph,
+// Export to file (simple method)
+let assert Ok(Nil) = json.write("graph.json", graph)
+
+// Export to file (with custom options)
+let assert Ok(Nil) = json.write_with(
   "graph.json",
   json.default_export_options(),
+  graph,
 )
 ```
 
@@ -496,7 +501,7 @@ See [test/examples/multigraph_json_example.gleam](https://github.com/code-shoily
 | `yog_io/tgf` | TGF (Trivial Graph Format) serialization and parsing |
 | `yog_io/leda` | LEDA format with strict validation |
 | `yog_io/pajek` | Pajek (.net) format for social network analysis |
-| `yog_io/json` | JSON export with multiple format presets and MultiGraph support |
+| `yog_io/json` | JSON export with multiple format presets and MultiGraph support (WRITE-ONLY) |
 | `yog_io/graphml` | Full GraphML support with custom mappers |
 | `yog_io/gdf` | Full GDF support with custom mappers |
 
@@ -532,6 +537,8 @@ See [test/examples/multigraph_json_example.gleam](https://github.com/code-shoily
 
 ### JSON
 
+**Note:** JSON module is currently WRITE-ONLY. Import/read functionality is not implemented.
+
 - ✅ Generic format with full metadata
 - ✅ D3.js force-directed format
 - ✅ Cytoscape.js elements format
@@ -540,8 +547,9 @@ See [test/examples/multigraph_json_example.gleam](https://github.com/code-shoily
 - ✅ MultiGraph support with unique edge IDs
 - ✅ Custom node and edge serializers
 - ✅ Generic type support (not limited to String)
-- ✅ File I/O operations
+- ✅ File write operations
 - ✅ Custom metadata fields
+- ❌ Import/read operations (not implemented)
 
 ### GraphML
 
@@ -572,6 +580,8 @@ See [test/examples/multigraph_json_example.gleam](https://github.com/code-shoily
 | JSON (all) | ✅ | ✅ | ✅ | ✅ | ✅ | Partial |
 | GraphML | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ |
 | GDF | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ |
+
+**Note:** JSON format is write-only (export only). All other formats support bidirectional read/write operations.
 
 ## File Format Examples
 

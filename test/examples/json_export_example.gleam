@@ -91,6 +91,21 @@ pub fn main() {
     Error(e) -> io.println("✗ Error: " <> yog_json.error_to_string(e))
   }
 
+  // Example 6b: Using write() and write_with() convenience functions
+  io.println("\n6b. Using write() and write_with() convenience functions...")
+  case yog_json.write("output/graph-write.json", graph) {
+    Ok(_) -> io.println("✓ Saved using write() to output/graph-write.json")
+    Error(e) -> io.println("✗ Error: " <> yog_json.error_to_string(e))
+  }
+
+  case
+    yog_json.write_with("output/graph-write-custom.json", d3_options, graph)
+  {
+    Ok(_) ->
+      io.println("✓ Saved using write_with() to output/graph-write-custom.json")
+    Error(e) -> io.println("✗ Error: " <> yog_json.error_to_string(e))
+  }
+
   // Example 7: Custom types with serializers
   io.println("\n7. Custom types with serializers:")
 
