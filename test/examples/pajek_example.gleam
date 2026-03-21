@@ -14,15 +14,16 @@ pub fn main() {
   io.println("=== Pajek Format Example ===\n")
 
   // Create a simple social network
-  let graph =
+  let assert Ok(_graph) =
     model.new(model.Directed)
     |> model.add_node(1, "Alice Smith")
     |> model.add_node(2, "Bob Jones")
     |> model.add_node(3, "Carol Williams")
-
-  let assert Ok(graph) = model.add_edge(graph, from: 1, to: 2, with: "follows")
-  let assert Ok(graph) = model.add_edge(graph, from: 2, to: 3, with: "knows")
-  let assert Ok(graph) = model.add_edge(graph, from: 3, to: 1, with: "mentions")
+    |> model.add_edges([
+      #(1, 2, "follows"),
+      #(2, 3, "knows"),
+      #(3, 1, "mentions"),
+    ])
 
   // Export to Pajek (directed graph uses *Arcs)
   io.println("Output:")
@@ -44,14 +45,12 @@ pub fn main() {
   // Example with undirected graph
   io.println("\n=== Pajek Undirected Graph ===\n")
 
-  let graph2 =
+  let assert Ok(_graph2) =
     model.new(model.Undirected)
     |> model.add_node(1, "Node A")
     |> model.add_node(2, "Node B")
     |> model.add_node(3, "Node C")
-
-  let assert Ok(graph2) = model.add_edge(graph2, from: 1, to: 2, with: "")
-  let assert Ok(graph2) = model.add_edge(graph2, from: 2, to: 3, with: "")
+    |> model.add_edges([#(1, 2, ""), #(2, 3, "")])
 
   io.println("Output:")
   io.println("*Vertices 3")
