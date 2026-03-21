@@ -5,6 +5,7 @@
 //// - **GDF** - Simple CSV-like format used by Gephi
 //// - **TGF** - Trivial Graph Format, a simple text format for quick exchange
 //// - **LEDA** - Library of Efficient Data types and Algorithms format
+//// - **Pajek** - Social network analysis standard (.net format)
 //// - **JSON** - Multiple formats for web visualization libraries (D3.js, Cytoscape.js, vis.js, etc.)
 ////
 //// ## Quick Start
@@ -37,6 +38,7 @@
 //// - **`yog_io/gdf`** - GDF format support with custom attribute mappers
 //// - **`yog_io/tgf`** - TGF format support with custom label functions
 //// - **`yog_io/leda`** - LEDA format support for research tool compatibility
+//// - **`yog_io/pajek`** - Pajek format support for social network analysis
 ////
 //// For more control over serialization, use the submodules directly.
 
@@ -48,6 +50,7 @@ import yog_io/gdf
 import yog_io/graphml
 import yog_io/json
 import yog_io/leda
+import yog_io/pajek
 import yog_io/tgf
 
 // Re-export types
@@ -89,6 +92,18 @@ pub type LedaError =
 
 pub type LedaType =
   leda.LedaType
+
+pub type PajekOptions(n, e) =
+  pajek.PajekOptions(n, e)
+
+pub type PajekError =
+  pajek.PajekError
+
+pub type PajekNodeShape =
+  pajek.NodeShape
+
+pub type PajekNodeAttributes =
+  pajek.NodeAttributes
 
 pub type JsonFormat =
   json.JsonFormat
@@ -222,6 +237,16 @@ pub fn default_tgf_options() -> tgf.TgfOptions(String, String) {
 /// Default options for LEDA serialization.
 pub fn default_leda_options() -> leda.LedaOptions(String, String) {
   leda.default_options()
+}
+
+/// Default options for Pajek serialization.
+pub fn default_pajek_options() -> pajek.PajekOptions(String, String) {
+  pajek.default_options()
+}
+
+/// Default node attributes for Pajek serialization.
+pub fn default_pajek_node_attributes() -> pajek.NodeAttributes {
+  pajek.default_node_attributes()
 }
 
 /// Default options for JSON export.
@@ -493,4 +518,74 @@ pub fn write_leda(
 /// ```
 pub fn to_leda(graph: Graph(String, String)) -> String {
   leda.serialize(graph)
+}
+
+// =============================================================================
+// PAJEK FUNCTIONS
+// =============================================================================
+
+/// Reads a graph from a Pajek file.
+///
+/// This is a convenience function that reads node and edge data as strings.
+/// For custom data types, use `pajek.read_with`.
+///
+/// ## Example
+///
+/// ```gleam
+/// case yog_io.read_pajek("graph.net") {
+///   Ok(pajek.PajekResult(graph, warnings)) -> {
+///     // Use the graph
+///     process_graph(graph)
+///   }
+///   Error(e) -> handle_error(e)
+/// }
+/// ```
+pub fn read_pajek(path: String) -> Result(pajek.PajekResult(String, String), pajek.PajekError) {
+  pajek.read(path)
+}
+
+/// Writes a graph to a Pajek file.
+///
+/// This is a convenience function for graphs with string data.
+/// For custom data types, use `pajek.write_with`.
+///
+/// ## Example
+///
+/// ```gleam
+/// import yog/model.{Directed}
+///
+/// let graph =
+///   model.new(Directed)
+///   |> model.add_node(1, "Alice")
+///   |> model.add_node(2, "Bob")
+///
+/// let assert Ok(graph) = model.add_edge(graph, from: 1, to: 2, with: "follows")
+///
+/// let assert Ok(Nil) = yog_io.write_pajek("graph.net", graph)
+/// ```
+pub fn write_pajek(
+  path: String,
+  graph: Graph(String, String),
+) -> Result(Nil, simplifile.FileError) {
+  pajek.write(path, graph)
+}
+
+/// Converts a graph to a Pajek string.
+///
+/// This is a convenience function for graphs with string data.
+///
+/// ## Example
+///
+/// ```gleam
+/// import yog/model.{Directed}
+///
+/// let graph =
+///   model.new(Directed)
+///   |> model.add_node(1, "Alice")
+///   |> model.add_node(2, "Bob")
+///
+/// let pajek_string = yog_io.to_pajek(graph)
+/// ```
+pub fn to_pajek(graph: Graph(String, String)) -> String {
+  pajek.serialize(graph)
 }
