@@ -100,7 +100,9 @@ pub type TgfOptions(n, e) {
 /// - Node labels: Uses the node data's string representation
 /// - Edge labels: None (edges are just `source target`)
 pub fn default_options() -> TgfOptions(String, String) {
-  TgfOptions(node_label: fn(data: String) { data }, edge_label: fn(_: String) { None })
+  TgfOptions(node_label: fn(data: String) { data }, edge_label: fn(_: String) {
+    None
+  })
 }
 
 /// Creates TGF options with custom node and edge label functions.
@@ -208,8 +210,7 @@ pub fn serialize_with(options: TgfOptions(n, e), graph: Graph(n, e)) -> String {
         case graph.kind {
           Undirected if from_id > to_id -> inner_b
           _ -> {
-            let base =
-              int.to_string(from_id) <> " " <> int.to_string(to_id)
+            let base = int.to_string(from_id) <> " " <> int.to_string(to_id)
             let line = case options.edge_label(weight) {
               Some(label) -> base <> " " <> label <> "\n"
               None -> base <> "\n"
@@ -402,7 +403,8 @@ fn do_parse_nodes(
           // Check for duplicate IDs
           case list.any(acc, fn(pair) { pair.0 == id }) {
             True -> Error(DuplicateNodeId(line_num, id))
-            False -> do_parse_nodes(rest, node_parser, [#(id, data), ..acc], warnings)
+            False ->
+              do_parse_nodes(rest, node_parser, [#(id, data), ..acc], warnings)
           }
         }
         Error(None) -> {
@@ -475,10 +477,17 @@ fn do_parse_edges(
     [] -> Ok(#(graph, warnings))
     [#(line_num, line), ..rest] -> {
       case parse_edge_line(line, line_num, edge_parser, graph, node_parser) {
-        Ok(new_graph) -> do_parse_edges(rest, edge_parser, new_graph, warnings, node_parser)
+        Ok(new_graph) ->
+          do_parse_edges(rest, edge_parser, new_graph, warnings, node_parser)
         Error(None) -> {
           // Skip malformed line with warning
-          do_parse_edges(rest, edge_parser, graph, [#(line_num, line), ..warnings], node_parser)
+          do_parse_edges(
+            rest,
+            edge_parser,
+            graph,
+            [#(line_num, line), ..warnings],
+            node_parser,
+          )
         }
         Error(Some(e)) -> Error(e)
       }
@@ -510,9 +519,17 @@ fn parse_edge_line(
           }
 
           // Try to add edge - if nodes don't exist, create them
-          let graph_with_nodes = ensure_nodes_exist(graph, src, tgt, node_parser)
+          let graph_with_nodes =
+            ensure_nodes_exist(graph, src, tgt, node_parser)
 
-          case model.add_edge(graph_with_nodes, from: src, to: tgt, with: edge_data) {
+          case
+            model.add_edge(
+              graph_with_nodes,
+              from: src,
+              to: tgt,
+              with: edge_data,
+            )
+          {
             Ok(new_graph) -> Ok(new_graph)
             Error(_) -> Error(None)
           }
@@ -537,7 +554,8 @@ fn ensure_nodes_exist(
   }
   case dict.has_key(graph_with_src.nodes, tgt) {
     True -> graph_with_src
-    False -> model.add_node(graph_with_src, tgt, node_parser(tgt, int.to_string(tgt)))
+    False ->
+      model.add_node(graph_with_src, tgt, node_parser(tgt, int.to_string(tgt)))
   }
 }
 
@@ -621,7 +639,8 @@ pub fn read_with(
   edge_parser edge_parser: fn(String) -> e,
 ) -> Result(TgfResult(n, e), TgfError) {
   case simplifile.read(path) {
-    Ok(content) -> parse_with(content, graph_type: gtype, node_parser:, edge_parser:)
+    Ok(content) ->
+      parse_with(content, graph_type: gtype, node_parser:, edge_parser:)
     Error(e) -> Error(ReadError(path, simplifile.describe_error(e)))
   }
 }

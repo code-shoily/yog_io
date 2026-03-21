@@ -20,10 +20,8 @@ pub fn serialize_directed_test() {
   let assert Ok(graph2) = model.add_edge(graph, from: 1, to: 2, with: "follows")
   let assert Ok(graph3) = model.add_edge(graph2, from: 2, to: 3, with: "knows")
 
-  let options = tgf.options_with(
-    node_label: fn(data) { data },
-    edge_label: fn(_) { None },
-  )
+  let options =
+    tgf.options_with(node_label: fn(data) { data }, edge_label: fn(_) { None })
   let result = tgf.serialize_with(options, graph3)
 
   // Check that output contains expected elements
@@ -42,10 +40,10 @@ pub fn serialize_with_edge_labels_test() {
     |> model.add_node(2, "Bob")
   let assert Ok(graph2) = model.add_edge(graph, from: 1, to: 2, with: "follows")
 
-  let options = tgf.options_with(
-    node_label: fn(data) { data },
-    edge_label: fn(label) { Some(label) },
-  )
+  let options =
+    tgf.options_with(node_label: fn(data) { data }, edge_label: fn(label) {
+      Some(label)
+    })
   let result = tgf.serialize_with(options, graph2)
 
   result |> string.contains("1 2 follows") |> should.be_true()
@@ -74,10 +72,8 @@ pub fn serialize_undirected_test() {
   let assert Ok(graph2) = model.add_edge(graph, from: 1, to: 2, with: "")
   let assert Ok(graph3) = model.add_edge(graph2, from: 2, to: 3, with: "")
 
-  let options = tgf.options_with(
-    node_label: fn(data) { data },
-    edge_label: fn(_) { None },
-  )
+  let options =
+    tgf.options_with(node_label: fn(data) { data }, edge_label: fn(_) { None })
   let result = tgf.serialize_with(options, graph3)
 
   // For undirected, edges should still be present
@@ -94,8 +90,9 @@ pub fn serialize_undirected_test() {
 pub fn parse_simple_test() {
   let input = "1 Alice\n2 Bob\n#\n1 2"
 
-  let result = tgf.parse(input, model.Directed)
-  |> should.be_ok()
+  let result =
+    tgf.parse(input, model.Directed)
+    |> should.be_ok()
 
   result.graph |> model.node_count() |> should.equal(2)
   result.graph |> model.edge_count() |> should.equal(1)
@@ -108,8 +105,9 @@ pub fn parse_simple_test() {
 pub fn parse_with_edge_labels_test() {
   let input = "1 Alice\n2 Bob\n3 Carol\n#\n1 2 follows\n2 3 knows"
 
-  let result = tgf.parse(input, model.Directed)
-  |> should.be_ok()
+  let result =
+    tgf.parse(input, model.Directed)
+    |> should.be_ok()
 
   result.graph |> model.node_count() |> should.equal(3)
   result.graph |> model.edge_count() |> should.equal(2)
@@ -118,8 +116,9 @@ pub fn parse_with_edge_labels_test() {
 pub fn parse_undirected_test() {
   let input = "1 A\n2 B\n3 C\n#\n1 2\n2 3"
 
-  let result = tgf.parse(input, model.Undirected)
-  |> should.be_ok()
+  let result =
+    tgf.parse(input, model.Undirected)
+    |> should.be_ok()
 
   result.graph |> model.node_count() |> should.equal(3)
   result.graph |> model.edge_count() |> should.equal(2)
@@ -136,8 +135,9 @@ pub fn parse_empty_input_test() {
 pub fn parse_no_edges_test() {
   let input = "1 Alice\n2 Bob\n#"
 
-  let result = tgf.parse(input, model.Directed)
-  |> should.be_ok()
+  let result =
+    tgf.parse(input, model.Directed)
+    |> should.be_ok()
 
   result.graph |> model.node_count() |> should.equal(2)
   result.graph |> model.edge_count() |> should.equal(0)
@@ -146,8 +146,9 @@ pub fn parse_no_edges_test() {
 pub fn parse_only_separator_test() {
   let input = "#"
 
-  let result = tgf.parse(input, model.Directed)
-  |> should.be_ok()
+  let result =
+    tgf.parse(input, model.Directed)
+    |> should.be_ok()
 
   result.graph |> model.node_count() |> should.equal(0)
   result.graph |> model.edge_count() |> should.equal(0)
@@ -156,8 +157,9 @@ pub fn parse_only_separator_test() {
 pub fn parse_whitespace_handling_test() {
   let input = "  1  Alice  \n  2  Bob  \n  #  \n  1  2  follows  "
 
-  let result = tgf.parse(input, model.Directed)
-  |> should.be_ok()
+  let result =
+    tgf.parse(input, model.Directed)
+    |> should.be_ok()
 
   result.graph |> model.node_count() |> should.equal(2)
 }
@@ -165,8 +167,9 @@ pub fn parse_whitespace_handling_test() {
 pub fn parse_labels_with_spaces_test() {
   let input = "1 Alice Smith\n2 Bob Jones\n#\n1 2 works with"
 
-  let result = tgf.parse(input, model.Directed)
-  |> should.be_ok()
+  let result =
+    tgf.parse(input, model.Directed)
+    |> should.be_ok()
 
   let nodes = result.graph.nodes
   dict.get(nodes, 1) |> should.be_ok() |> should.equal("Alice Smith")
@@ -192,20 +195,21 @@ pub fn roundtrip_simple_test() {
   let assert Ok(graph2) = model.add_edge(graph, from: 1, to: 2, with: "follows")
 
   // Export
-  let options = tgf.options_with(
-    node_label: fn(data) { data },
-    edge_label: fn(label) { Some(label) },
-  )
+  let options =
+    tgf.options_with(node_label: fn(data) { data }, edge_label: fn(label) {
+      Some(label)
+    })
   let exported = tgf.serialize_with(options, graph2)
 
   // Import
-  let result = tgf.parse_with(
-    exported,
-    graph_type: model.Directed,
-    node_parser: fn(_id, label) { label },
-    edge_parser: fn(label) { label },
-  )
-  |> should.be_ok()
+  let result =
+    tgf.parse_with(
+      exported,
+      graph_type: model.Directed,
+      node_parser: fn(_id, label) { label },
+      edge_parser: fn(label) { label },
+    )
+    |> should.be_ok()
 
   // Verify structure
   result.graph |> model.node_count() |> should.equal(2)
@@ -223,10 +227,10 @@ pub fn serialize_custom_types_test() {
     |> model.add_node(2, 200)
   let assert Ok(graph2) = model.add_edge(graph, from: 1, to: 2, with: 42)
 
-  let options = tgf.options_with(
-    node_label: fn(n) { int.to_string(n) },
-    edge_label: fn(w) { Some(int.to_string(w)) },
-  )
+  let options =
+    tgf.options_with(node_label: fn(n) { int.to_string(n) }, edge_label: fn(w) {
+      Some(int.to_string(w))
+    })
   let result = tgf.serialize_with(options, graph2)
 
   result |> string.contains("1 100") |> should.be_true()
@@ -242,8 +246,9 @@ pub fn parse_auto_create_nodes_test() {
   // Edge references non-existent node
   let input = "1 Alice\n#\n1 99 knows"
 
-  let result = tgf.parse(input, model.Directed)
-  |> should.be_ok()
+  let result =
+    tgf.parse(input, model.Directed)
+    |> should.be_ok()
 
   result.graph |> model.node_count() |> should.equal(2)
   result.graph |> model.edge_count() |> should.equal(1)
@@ -257,8 +262,9 @@ pub fn parse_auto_create_both_nodes_test() {
   // Edge with both nodes missing from node section
   let input = "#\n5 10 connects"
 
-  let result = tgf.parse(input, model.Directed)
-  |> should.be_ok()
+  let result =
+    tgf.parse(input, model.Directed)
+    |> should.be_ok()
 
   result.graph |> model.node_count() |> should.equal(2)
   result.graph |> model.edge_count() |> should.equal(1)
@@ -317,8 +323,9 @@ pub fn parse_with_warnings_test() {
   // Empty node lines and incomplete edge lines should become warnings
   let input = "1 Alice\n2 Bob\n#\n1 2\n3\nincomplete"
 
-  let result = tgf.parse(input, model.Directed)
-  |> should.be_ok()
+  let result =
+    tgf.parse(input, model.Directed)
+    |> should.be_ok()
 
   // Should successfully parse valid parts
   result.graph |> model.node_count() |> should.equal(2)
@@ -340,8 +347,9 @@ pub fn parse_node_without_label_test() {
   // Node ID with no label should use ID as label
   let input = "1\n2 Bob\n#\n1 2"
 
-  let result = tgf.parse(input, model.Directed)
-  |> should.be_ok()
+  let result =
+    tgf.parse(input, model.Directed)
+    |> should.be_ok()
 
   let nodes = result.graph.nodes
   dict.get(nodes, 1) |> should.be_ok() |> should.equal("1")
@@ -352,8 +360,9 @@ pub fn parse_multiple_spaces_test() {
   // Multiple spaces should be handled correctly
   let input = "1   Alice   Smith\n2    Bob    Jones\n#\n1   2   works   with"
 
-  let result = tgf.parse(input, model.Directed)
-  |> should.be_ok()
+  let result =
+    tgf.parse(input, model.Directed)
+    |> should.be_ok()
 
   let nodes = result.graph.nodes
   dict.get(nodes, 1) |> should.be_ok() |> should.equal("Alice Smith")
