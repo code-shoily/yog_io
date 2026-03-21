@@ -1,8 +1,8 @@
 name = "yog_io"
-version = "0.6.0"
+version = "0.9.0"
 
 targets = ["erlang", "javascript"]
-description = "Graph file format I/O for the yog graph library - GraphML and GDF support"
+description = "Graph file format I/O for the yog graph library - GraphML, GDF, and JSON support with multiple format presets for web visualization"
 licences = ["Apache-2.0"]
 repository = { type = "github", user = "code-shoily", repo = "yog_io" }
 links = [{ title = "Website", href = "https://github.com/code-shoily/yog_io" }]

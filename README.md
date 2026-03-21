@@ -3,14 +3,18 @@
 [![Package Version](https://img.shields.io/hexpm/v/yog_io)](https://hex.pm/packages/yog_io)
 [![Hex Docs](https://img.shields.io/badge/hex-docs-ffaff3)](https://hexdocs.pm/yog_io/)
 
-Graph file format I/O for the [yog](https://hex.pm/packages/yog) graph library. Provides serialization and deserialization support for popular graph file formats including GraphML, GDF, and JSON.
+Graph file format I/O for the [yog](https://hex.pm/packages/yog) graph library. Provides serialization and deserialization support for popular graph file formats including TGF, LEDA, Pajek, JSON, GraphML, and GDF.
 
 ## Features
 
+- **TGF Support** - Trivial Graph Format with auto-node creation for lenient parsing
+- **LEDA Support** - Academic graph format compatible with LEDA library and NetworkX
+- **Pajek Support** - Social network analysis format (.net files) with visual attributes
+- **JSON Support** - Multiple JSON formats for web visualization libraries (D3.js, Cytoscape.js, vis.js, NetworkX)
+- **MultiGraph Support** - Parallel edges with unique edge IDs in JSON formats
 - **GraphML Support** - Full XML-based graph format support compatible with Gephi, yEd, Cytoscape, and NetworkX
 - **Gephi-Optimized** - Typed attributes (int, double, boolean) for proper Gephi visualizations and analysis
 - **GDF Support** - Simple CSV-like format used by Gephi and GUESS
-- **JSON Support** - Multiple JSON formats for web visualization libraries (D3.js, Cytoscape.js, vis.js, NetworkX)
 - **Generic Types** - Work with any node and edge data types using custom serializers
 - **Custom Attributes** - Map your domain types to graph attributes with custom mappers
 - **JS Compatible** - Uses `xmlm` for XML parsing and `simplifile` for file operations
@@ -460,20 +464,84 @@ The output will include `"graph_type": "directed"` in the metadata. The acyclici
 
 #### MultiGraph Support
 
-**Note:** The current JSON implementation supports simple graphs (at most one edge between any pair of nodes). Support for MultiGraphs (multiple parallel edges between nodes) is planned for a future release.
+The JSON module now supports MultiGraphs (graphs with multiple parallel edges between nodes):
 
-For details on how different graph types will be represented, see [GRAPH_TYPES_JSON.md](GRAPH_TYPES_JSON.md).
+```gleam
+import yog/multi/model as multi
+import yog_io/json
+
+// Create a multigraph with parallel edges
+let graph = multi.new(model.Directed)
+  |> multi.add_node(1, "Alice")
+  |> multi.add_node(2, "Bob")
+
+let #(graph, _) = multi.add_edge(graph, from: 1, to: 2, with: "follows")
+let #(graph, _) = multi.add_edge(graph, from: 1, to: 2, with: "mentions")
+let #(graph, _) = multi.add_edge(graph, from: 1, to: 2, with: "likes")
+
+// Export multigraph to JSON
+let options = json.export_options_with(json.string, json.string)
+let json_string = json.to_json_multi(graph, options)
+```
+
+All JSON format presets (Generic, D3Force, Cytoscape, VisJs, NetworkX) support multigraphs with unique edge IDs. The Generic and NetworkX formats include a `"multigraph": true` metadata flag.
+
+See [test/examples/multigraph_json_example.gleam](https://github.com/code-shoily/yog_io/blob/main/test/examples/multigraph_json_example.gleam) for a complete example.
 
 ## Module Overview
 
 | Module | Purpose |
 |--------|---------|
 | `yog_io` | Convenience functions for common operations |
+| `yog_io/tgf` | TGF (Trivial Graph Format) serialization and parsing |
+| `yog_io/leda` | LEDA format with strict validation |
+| `yog_io/pajek` | Pajek (.net) format for social network analysis |
+| `yog_io/json` | JSON export with multiple format presets and MultiGraph support |
 | `yog_io/graphml` | Full GraphML support with custom mappers |
 | `yog_io/gdf` | Full GDF support with custom mappers |
-| `yog_io/json` | JSON export with multiple format presets |
 
 ## Format Support
+
+### TGF (Trivial Graph Format)
+
+- ✅ Human-readable text format with minimal syntax
+- ✅ Auto-node creation for lenient parsing
+- ✅ Support for nodes without labels (defaults to ID)
+- ✅ Multi-word labels with space handling
+- ✅ Warning collection for malformed lines
+- ✅ Directed and undirected graphs
+
+### LEDA
+
+- ✅ LEDA Library compatibility for academic research
+- ✅ 1-indexed sequential node IDs
+- ✅ Strict node reference validation
+- ✅ Support for typed node and edge data
+- ✅ Reversal edge indices for undirected graphs
+- ✅ Comprehensive error reporting with line numbers
+
+### Pajek
+
+- ✅ Social network analysis standard (.net files)
+- ✅ Multi-word quoted labels support
+- ✅ Case-insensitive section headers
+- ✅ Visual attributes (coordinates, shapes, colors, sizes)
+- ✅ Weighted edges with optional float values
+- ✅ Comment handling (% lines)
+- ✅ Graph type auto-detection (*Arcs vs *Edges)
+
+### JSON
+
+- ✅ Generic format with full metadata
+- ✅ D3.js force-directed format
+- ✅ Cytoscape.js elements format
+- ✅ vis.js network format
+- ✅ NetworkX node-link format
+- ✅ MultiGraph support with unique edge IDs
+- ✅ Custom node and edge serializers
+- ✅ Generic type support (not limited to String)
+- ✅ File I/O operations
+- ✅ Custom metadata fields
 
 ### GraphML
 
@@ -494,17 +562,16 @@ For details on how different graph types will be represented, see [GRAPH_TYPES_J
 - ✅ Custom separators and type annotations
 - ✅ Weighted graph convenience functions
 
-### JSON
+### Format Compatibility Matrix
 
-- ✅ Generic format with full metadata
-- ✅ D3.js force-directed format
-- ✅ Cytoscape.js elements format
-- ✅ vis.js network format
-- ✅ NetworkX node-link format
-- ✅ Custom node and edge serializers
-- ✅ Generic type support (not limited to String)
-- ✅ File I/O operations
-- ✅ Custom metadata fields
+| Format | Directed | Undirected | Weighted | Attributes | MultiGraph | Visual |
+|--------|----------|------------|----------|------------|------------|--------|
+| TGF | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| LEDA | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
+| Pajek | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ |
+| JSON (all) | ✅ | ✅ | ✅ | ✅ | ✅ | Partial |
+| GraphML | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ |
+| GDF | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ |
 
 ## File Format Examples
 
@@ -574,80 +641,106 @@ edgedef>node1 VARCHAR,node2 VARCHAR,directed BOOLEAN,label VARCHAR
 }
 ```
 
-## Future Enhancements
+## Examples
 
-The following formats and features are planned for future releases:
+Detailed examples demonstrating each format are located in the [test/examples/](https://github.com/code-shoily/yog_io/tree/main/test/examples) directory:
 
-### MultiGraph Support (JSON)
+- [TGF Example](https://github.com/code-shoily/yog_io/blob/main/test/examples/tgf_example.gleam) - Trivial Graph Format with auto-node creation and optional edge labels
+- [LEDA Example](https://github.com/code-shoily/yog_io/blob/main/test/examples/leda_example.gleam) - LEDA format for academic graph algorithms with directed and undirected examples
+- [Pajek Example](https://github.com/code-shoily/yog_io/blob/main/test/examples/pajek_example.gleam) - Social network analysis format with multi-word labels
+- [MultiGraph JSON Example](https://github.com/code-shoily/yog_io/blob/main/test/examples/multigraph_json_example.gleam) - Parallel edges with unique edge IDs across all JSON formats
 
-Support for graphs with multiple parallel edges between the same pair of nodes.
+### Running Examples Locally
 
-- **Target:** v0.7
-- **Status:** Planned
-- **Details:** Extend JSON module to support `yog/multi/model.MultiGraph` with edge IDs
+The examples live in the `test/examples/` directory and can be run directly:
 
-### LEDA Format (.gw, .lgr)
+```bash
+gleam run -m examples/tgf_example
+gleam run -m examples/leda_example
+gleam run -m examples/pajek_example
+gleam run -m examples/multigraph_json_example
+```
 
-Native format of the LEDA (Library of Efficient Data types and Algorithms) library.
+Run all examples at once:
 
-- **Target:** v0.9
-- **Status:** Planned
-- **Use Cases:** Computational geometry research, NetworkX interoperability
-- **Features:** Text-based, supports node/edge data, directed and undirected graphs
-
-### Pajek Format (.net)
-
-Standard format for social network analysis.
-
-- **Target:** v0.8
-- **Status:** Under consideration
-- **Use Cases:** Social network analysis, network science research
-- **Features:** Node attributes, edge weights, partition support
-
-### TGF (Trivial Graph Format)
-
-Simple text-based format for basic graph exchange.
-
-- **Target:** v0.7
-- **Status:** Under consideration
-- **Use Cases:** Simple graph exchange, human-readable format
-- **Features:** Minimal syntax, easy to parse and write
-
-### Other Formats Under Consideration
-
-- **GEXF** - Gephi Exchange Format (XML-based, dynamic graphs)
-- **Graph6/Sparse6** - Compact encoding for graph theory research (low priority due to complexity)
+```bash
+./run_examples.sh
+```
 
 ## Development
 
-```sh
-# Run tests
+### Running Tests
+
+Run the full test suite:
+
+```bash
 gleam test
+```
 
-# Run specific test module
-gleam test yog_io/graphml_test
-gleam test yog_io/gdf_test
-gleam test yog_io/json_test
+Run tests for a specific module:
 
-# Run examples (output files are written to output/ directory)
-gleam run -m examples/json_export_example
-gleam run -m examples/gephi_example
+```bash
+./test_module.sh yog_io/json_test
+./test_module.sh yog_io/graphml_test
+./test_module.sh yog_io/tgf_test
+```
 
-# Build documentation
+Run a specific test function:
+
+```bash
+./test_module.sh yog_io/json_test to_json_generic_format_test
+```
+
+### Running Examples
+
+Run all examples at once:
+
+```bash
+./run_examples.sh
+```
+
+Run a specific example:
+
+```bash
+gleam run -m examples/tgf_example
+gleam run -m examples/multigraph_json_example
+```
+
+### Building Documentation
+
+```bash
 gleam docs
 ```
+
+### Project Structure
+
+- `src/yog_io/` - Format-specific I/O modules (TGF, LEDA, Pajek, JSON, GraphML, GDF)
+- `test/` - Unit tests for each format
+- `test/examples/` - Real-world usage examples demonstrating each format
 
 **Note:** Example outputs (JSON files, GraphML files, etc.) are written to the `output/` directory, which is ignored by git.
 
 ## References
 
+### Format Specifications
+
+- [TGF - Wikipedia](https://en.wikipedia.org/wiki/Trivial_Graph_Format) | [yEd TGF Import](https://yed.yworks.com/support/manual/tgf.html)
+- [LEDA Library](https://www.algorithmic-solutions.com/leda/) | [NetworkX LEDA](https://networkx.org/documentation/stable/reference/readwrite/leda.html)
+- [Pajek Software](http://mrvar.fdv.uni-lj.si/pajek/) | [Pajek .net Format](http://mrvar.fdv.uni-lj.si/pajek/dokuwiki/doku.php?id=description_of_net_file_format)
 - [GraphML Specification](http://graphml.graphdrawing.org/specification.html)
-- [GDF Format](https://gephi.org/users/supported-graph-formats/gdf-format/)
+- [GDF Format - Gephi](https://gephi.org/users/supported-graph-formats/gdf-format/)
 - [JSON Specification](https://www.json.org/)
+
+### Visualization Tools
+
 - [D3.js Documentation](https://d3js.org/)
 - [Cytoscape.js Documentation](https://js.cytoscape.org/)
 - [vis.js Documentation](https://visjs.github.io/vis-network/)
 - [NetworkX JSON Format](https://networkx.org/documentation/stable/reference/readwrite/json_graph.html)
+- [Gephi - Graph Visualization Platform](https://gephi.org/)
+
+### Libraries
+
 - [yog Graph Library](https://hex.pm/packages/yog)
 
 ## License

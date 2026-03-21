@@ -58,6 +58,7 @@ import gleam/result
 import gleam/string
 import simplifile
 import yog/model.{type Graph, Directed, Undirected}
+import yog/multi/model as multi
 
 /// Format presets for popular graph visualization libraries
 pub type JsonFormat {
@@ -693,4 +694,445 @@ pub fn error_to_string(error: JsonError) -> String {
     ReadError(path, msg) -> "Read error at " <> path <> ": " <> msg
     UnsupportedFormat(fmt) -> "Unsupported format: " <> fmt
   }
+}
+
+// =============================================================================
+// MULTIGRAPH EXPORT SUPPORT
+// =============================================================================
+
+/// Converts a multigraph to a JSON string.
+///
+/// This function serializes a multigraph to JSON format with edge IDs
+/// to preserve parallel edges. All formats include unique edge identifiers.
+///
+/// **Time Complexity:** O(V + E)
+///
+/// ## Example
+///
+/// ```gleam
+/// import yog/multi/model as multi
+/// import yog_io/json
+///
+/// pub fn main() {
+///   let graph =
+///     multi.new(multi.Directed)
+///     |> multi.add_node(1, "Alice")
+///     |> multi.add_node(2, "Bob")
+///     |> multi.add_edge(from: 1, to: 2, with: "follows")
+///     |> multi.add_edge(from: 1, to: 2, with: "mentions")
+///
+///   let json_string = json.to_json_multi(graph, json.default_export_options())
+///   // Returns JSON with edge IDs for parallel edges
+/// }
+/// ```
+pub fn to_json_multi(
+  graph: multi.MultiGraph(n, e),
+  options: JsonExportOptions(n, e),
+) -> String {
+  let json_obj = case options.format {
+    Generic -> to_generic_format_multi(graph, options)
+    D3Force -> to_d3_force_format_multi(graph, options)
+    Cytoscape -> to_cytoscape_format_multi(graph, options)
+    VisJs -> to_visjs_format_multi(graph, options)
+    NetworkX -> to_networkx_format_multi(graph, options)
+  }
+
+  case options.pretty {
+    True -> json.to_string(json_obj)
+    False -> json.to_string(json_obj)
+  }
+}
+
+/// Exports a multigraph to a JSON file.
+///
+/// This function writes the multigraph to a file in the specified JSON format.
+/// The file will be created if it doesn't exist, or overwritten if it does.
+///
+/// ## Example
+///
+/// ```gleam
+/// case json.to_json_file_multi(graph, "output.json", json.default_export_options()) {
+///   Ok(_) -> io.println("Multigraph saved successfully")
+///   Error(json.WriteError(path, error)) -> {
+///     io.println("Failed to write to " <> path <> ": " <> error)
+///   }
+///   Error(_) -> io.println("Unknown error")
+/// }
+/// ```
+pub fn to_json_file_multi(
+  graph: multi.MultiGraph(n, e),
+  path: String,
+  options: JsonExportOptions(n, e),
+) -> Result(Nil, JsonError) {
+  let json_string = to_json_multi(graph, options)
+
+  simplifile.write(to: path, contents: json_string)
+  |> result.map_error(fn(error) { WriteError(path, string.inspect(error)) })
+}
+
+// ===== MultiGraph Format Converters =====
+
+fn to_generic_format_multi(
+  graph: multi.MultiGraph(n, e),
+  options: JsonExportOptions(n, e),
+) -> json.Json {
+  let nodes_json = serialize_nodes_generic_multi(graph, options)
+  let edges_json = serialize_edges_generic_multi(graph, options)
+
+  let base_object = [
+    #("format", json.string("yog-generic")),
+    #("version", json.string("2.0")),
+    #("nodes", json.array(nodes_json, of: function.identity)),
+    #("edges", json.array(edges_json, of: function.identity)),
+  ]
+
+  let with_metadata = case options.include_metadata {
+    True -> {
+      let metadata = build_metadata_multi(graph, options)
+      [#("metadata", metadata), ..base_object]
+    }
+    False -> base_object
+  }
+
+  json.object(with_metadata)
+}
+
+fn to_d3_force_format_multi(
+  graph: multi.MultiGraph(n, e),
+  options: JsonExportOptions(n, e),
+) -> json.Json {
+  let nodes_json = serialize_nodes_d3_multi(graph, options)
+  let edges_json = serialize_edges_d3_multi(graph, options)
+
+  json.object([
+    #("nodes", json.array(nodes_json, of: function.identity)),
+    #("links", json.array(edges_json, of: function.identity)),
+  ])
+}
+
+fn to_cytoscape_format_multi(
+  graph: multi.MultiGraph(n, e),
+  options: JsonExportOptions(n, e),
+) -> json.Json {
+  let nodes_json = serialize_nodes_cytoscape_multi(graph, options)
+  let edges_json = serialize_edges_cytoscape_multi(graph, options)
+
+  json.object([
+    #(
+      "elements",
+      json.object([
+        #("nodes", json.array(nodes_json, of: function.identity)),
+        #("edges", json.array(edges_json, of: function.identity)),
+      ]),
+    ),
+  ])
+}
+
+fn to_visjs_format_multi(
+  graph: multi.MultiGraph(n, e),
+  options: JsonExportOptions(n, e),
+) -> json.Json {
+  let nodes_json = serialize_nodes_visjs_multi(graph, options)
+  let edges_json = serialize_edges_visjs_multi(graph, options)
+
+  json.object([
+    #("nodes", json.array(nodes_json, of: function.identity)),
+    #("edges", json.array(edges_json, of: function.identity)),
+  ])
+}
+
+fn to_networkx_format_multi(
+  graph: multi.MultiGraph(n, e),
+  options: JsonExportOptions(n, e),
+) -> json.Json {
+  let nodes_json = serialize_nodes_networkx_multi(graph, options)
+  let edges_json = serialize_edges_networkx_multi(graph, options)
+
+  let directed = case graph.kind {
+    Directed -> True
+    Undirected -> False
+  }
+
+  json.object([
+    #("directed", json.bool(directed)),
+    #("multigraph", json.bool(True)),
+    #("graph", json.object([])),
+    #("nodes", json.array(nodes_json, of: function.identity)),
+    #("links", json.array(edges_json, of: function.identity)),
+  ])
+}
+
+// ===== MultiGraph Node Serialization Functions =====
+
+fn serialize_nodes_generic_multi(
+  graph: multi.MultiGraph(n, e),
+  options: JsonExportOptions(n, e),
+) -> List(json.Json) {
+  dict.fold(graph.nodes, [], fn(acc, id, data) {
+    let data_json = case options.node_serializer {
+      Some(serializer) -> serializer(data)
+      None -> json.null()
+    }
+
+    let node_obj = json.object([#("id", json.int(id)), #("data", data_json)])
+
+    [node_obj, ..acc]
+  })
+}
+
+fn serialize_nodes_d3_multi(
+  graph: multi.MultiGraph(n, e),
+  options: JsonExportOptions(n, e),
+) -> List(json.Json) {
+  dict.fold(graph.nodes, [], fn(acc, id, data) {
+    let id_str = int.to_string(id)
+
+    let base = [#("id", json.string(id_str))]
+
+    let with_data = case options.node_serializer {
+      Some(serializer) -> {
+        [#("data", serializer(data)), ..base]
+      }
+      None -> base
+    }
+
+    [json.object(with_data), ..acc]
+  })
+}
+
+fn serialize_nodes_cytoscape_multi(
+  graph: multi.MultiGraph(n, e),
+  options: JsonExportOptions(n, e),
+) -> List(json.Json) {
+  dict.fold(graph.nodes, [], fn(acc, id, data) {
+    let data_fields = [#("id", json.string(int.to_string(id)))]
+
+    let data_obj = case options.node_serializer {
+      Some(serializer) -> {
+        json.object([#("label", serializer(data)), ..data_fields])
+      }
+      None -> json.object(data_fields)
+    }
+
+    let node_obj = json.object([#("data", data_obj)])
+
+    [node_obj, ..acc]
+  })
+}
+
+fn serialize_nodes_visjs_multi(
+  graph: multi.MultiGraph(n, e),
+  options: JsonExportOptions(n, e),
+) -> List(json.Json) {
+  dict.fold(graph.nodes, [], fn(acc, id, data) {
+    let base = [#("id", json.int(id))]
+
+    let with_label = case options.node_serializer {
+      Some(serializer) -> [#("label", serializer(data)), ..base]
+      None -> base
+    }
+
+    [json.object(with_label), ..acc]
+  })
+}
+
+fn serialize_nodes_networkx_multi(
+  graph: multi.MultiGraph(n, e),
+  options: JsonExportOptions(n, e),
+) -> List(json.Json) {
+  dict.fold(graph.nodes, [], fn(acc, id, data) {
+    let base = [#("id", json.int(id))]
+
+    let with_data = case options.node_serializer {
+      Some(serializer) -> [#("data", serializer(data)), ..base]
+      None -> base
+    }
+
+    [json.object(with_data), ..acc]
+  })
+}
+
+// ===== MultiGraph Edge Serialization Functions =====
+
+fn serialize_edges_generic_multi(
+  graph: multi.MultiGraph(n, e),
+  options: JsonExportOptions(n, e),
+) -> List(json.Json) {
+  dict.fold(graph.edges, [], fn(acc, edge_id, edge_tuple) {
+    let #(from_id, to_id, edge_data) = edge_tuple
+
+    // For undirected graphs, only include each edge once
+    case graph.kind {
+      Undirected if from_id > to_id -> acc
+      _ -> {
+        let data_json = case options.edge_serializer {
+          Some(serializer) -> serializer(edge_data)
+          None -> json.null()
+        }
+
+        let edge_obj =
+          json.object([
+            #("id", json.int(edge_id)),
+            #("source", json.int(from_id)),
+            #("target", json.int(to_id)),
+            #("data", data_json),
+          ])
+
+        [edge_obj, ..acc]
+      }
+    }
+  })
+}
+
+fn serialize_edges_d3_multi(
+  graph: multi.MultiGraph(n, e),
+  options: JsonExportOptions(n, e),
+) -> List(json.Json) {
+  dict.fold(graph.edges, [], fn(acc, edge_id, edge_tuple) {
+    let #(from_id, to_id, edge_data) = edge_tuple
+
+    case graph.kind {
+      Undirected if from_id > to_id -> acc
+      _ -> {
+        let from_str = int.to_string(from_id)
+        let to_str = int.to_string(to_id)
+
+        let base = [
+          #("id", json.int(edge_id)),
+          #("source", json.string(from_str)),
+          #("target", json.string(to_str)),
+        ]
+
+        let with_data = case options.edge_serializer {
+          Some(serializer) -> [#("value", serializer(edge_data)), ..base]
+          None -> base
+        }
+
+        [json.object(with_data), ..acc]
+      }
+    }
+  })
+}
+
+fn serialize_edges_cytoscape_multi(
+  graph: multi.MultiGraph(n, e),
+  options: JsonExportOptions(n, e),
+) -> List(json.Json) {
+  dict.fold(graph.edges, [], fn(acc, edge_id, edge_tuple) {
+    let #(from_id, to_id, edge_data) = edge_tuple
+
+    case graph.kind {
+      Undirected if from_id > to_id -> acc
+      _ -> {
+        let edge_id_str = "e" <> int.to_string(edge_id)
+        let source_str = int.to_string(from_id)
+        let target_str = int.to_string(to_id)
+
+        let data_fields = [
+          #("id", json.string(edge_id_str)),
+          #("source", json.string(source_str)),
+          #("target", json.string(target_str)),
+        ]
+
+        let data_obj = case options.edge_serializer {
+          Some(serializer) -> {
+            json.object([#("label", serializer(edge_data)), ..data_fields])
+          }
+          None -> json.object(data_fields)
+        }
+
+        let edge_obj = json.object([#("data", data_obj)])
+
+        [edge_obj, ..acc]
+      }
+    }
+  })
+}
+
+fn serialize_edges_visjs_multi(
+  graph: multi.MultiGraph(n, e),
+  options: JsonExportOptions(n, e),
+) -> List(json.Json) {
+  dict.fold(graph.edges, [], fn(acc, edge_id, edge_tuple) {
+    let #(from_id, to_id, edge_data) = edge_tuple
+
+    case graph.kind {
+      Undirected if from_id > to_id -> acc
+      _ -> {
+        let base = [
+          #("id", json.int(edge_id)),
+          #("from", json.int(from_id)),
+          #("to", json.int(to_id)),
+        ]
+
+        let with_label = case options.edge_serializer {
+          Some(serializer) -> [#("label", serializer(edge_data)), ..base]
+          None -> base
+        }
+
+        [json.object(with_label), ..acc]
+      }
+    }
+  })
+}
+
+fn serialize_edges_networkx_multi(
+  graph: multi.MultiGraph(n, e),
+  options: JsonExportOptions(n, e),
+) -> List(json.Json) {
+  dict.fold(graph.edges, [], fn(acc, edge_id, edge_tuple) {
+    let #(from_id, to_id, edge_data) = edge_tuple
+
+    case graph.kind {
+      Undirected if from_id > to_id -> acc
+      _ -> {
+        let base = [
+          #("id", json.int(edge_id)),
+          #("source", json.int(from_id)),
+          #("target", json.int(to_id)),
+        ]
+
+        let with_data = case options.edge_serializer {
+          Some(serializer) -> [#("weight", serializer(edge_data)), ..base]
+          None -> base
+        }
+
+        [json.object(with_data), ..acc]
+      }
+    }
+  })
+}
+
+// ===== MultiGraph Metadata Building =====
+
+fn build_metadata_multi(
+  graph: multi.MultiGraph(n, e),
+  options: JsonExportOptions(n, e),
+) -> json.Json {
+  let graph_type = case graph.kind {
+    Directed -> "directed"
+    Undirected -> "undirected"
+  }
+
+  let base_metadata = [
+    #("graph_type", json.string(graph_type)),
+    #("multigraph", json.bool(True)),
+    #("node_count", json.int(dict.size(graph.nodes))),
+    #("edge_count", json.int(dict.size(graph.edges))),
+  ]
+
+  let with_custom = case options.metadata {
+    Some(custom_metadata) -> {
+      let custom_list =
+        dict.to_list(custom_metadata)
+        |> list.map(fn(pair) {
+          let #(key, value) = pair
+          #(key, value)
+        })
+      list.append(custom_list, base_metadata)
+    }
+    None -> base_metadata
+  }
+
+  json.object(with_custom)
 }

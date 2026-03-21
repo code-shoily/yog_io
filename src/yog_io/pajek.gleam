@@ -204,13 +204,7 @@ pub type PajekResult(n, e) {
 
 /// Default node attributes (no special visualization).
 pub fn default_node_attributes() -> NodeAttributes {
-  NodeAttributes(
-    x: None,
-    y: None,
-    shape: None,
-    size: None,
-    color: None,
-  )
+  NodeAttributes(x: None, y: None, shape: None, size: None, color: None)
 }
 
 /// Default Pajek options for String node and edge data.
@@ -316,7 +310,8 @@ pub fn serialize_with(options: PajekOptions(n, e), graph: Graph(n, e)) -> String
   let node_count = list.length(sorted_nodes)
 
   // *Vertices section
-  let builder = sb.append(builder, "*Vertices " <> int.to_string(node_count) <> "\n")
+  let builder =
+    sb.append(builder, "*Vertices " <> int.to_string(node_count) <> "\n")
 
   // Node lines: id "label" [x y shape ...]
   let builder =
@@ -382,7 +377,8 @@ fn build_node_line(
     False -> base
     True -> {
       case attrs.x, attrs.y {
-        Some(x), Some(y) -> base <> " " <> format_float(x) <> " " <> format_float(y)
+        Some(x), Some(y) ->
+          base <> " " <> format_float(x) <> " " <> format_float(y)
         _, _ -> base
       }
     }
@@ -647,7 +643,10 @@ fn parse_vertices(
   node_parser: fn(String) -> n,
   acc: List(#(Int, n)),
   warnings: List(#(Int, String)),
-) -> Result(#(List(#(Int, String)), List(#(Int, n)), List(#(Int, String))), PajekError) {
+) -> Result(
+  #(List(#(Int, String)), List(#(Int, n)), List(#(Int, String))),
+  PajekError,
+) {
   case count {
     0 -> Ok(#(lines, list.reverse(acc), list.reverse(warnings)))
     _ -> {
@@ -655,17 +654,27 @@ fn parse_vertices(
         [] -> {
           // Calculate expected line number based on how many vertices we've parsed
           let parsed_count = list.length(acc)
-          let expected_line = 2 + parsed_count  // *Vertices is line 1, then vertices start at line 2
+          let expected_line = 2 + parsed_count
+          // *Vertices is line 1, then vertices start at line 2
           Error(InvalidVertexLine(expected_line, "unexpected end of input"))
         }
         [#(line_num, line), ..rest] -> {
           case parse_vertex_line(line, node_parser) {
             Ok(#(id, data)) -> {
-              parse_vertices(rest, count - 1, node_parser, [#(id, data), ..acc], warnings)
+              parse_vertices(
+                rest,
+                count - 1,
+                node_parser,
+                [#(id, data), ..acc],
+                warnings,
+              )
             }
             Error(_) -> {
               // Skip malformed line with warning
-              parse_vertices(rest, count - 1, node_parser, acc, [#(line_num, line), ..warnings])
+              parse_vertices(rest, count - 1, node_parser, acc, [
+                #(line_num, line),
+                ..warnings
+              ])
             }
           }
         }
@@ -675,7 +684,10 @@ fn parse_vertices(
 }
 
 /// Parse a single vertex line: id "label" [x y ...]
-fn parse_vertex_line(line: String, node_parser: fn(String) -> n) -> Result(#(Int, n), Nil) {
+fn parse_vertex_line(
+  line: String,
+  node_parser: fn(String) -> n,
+) -> Result(#(Int, n), Nil) {
   let trimmed = string.trim(line)
 
   // Split only on first space to separate ID from the rest
@@ -705,15 +717,20 @@ fn extract_quoted_string_from_line(s: String) -> String {
       // Find the closing quote
       case string.split_once(after_first_quote, "\"") {
         Ok(#(label, _)) -> label
-        Error(_) -> trimmed  // No closing quote, return as-is
+        Error(_) -> trimmed
+        // No closing quote, return as-is
       }
     }
-    Error(_) -> trimmed  // No quotes at all, return as-is
+    Error(_) -> trimmed
+    // No quotes at all, return as-is
   }
 }
 
 /// Create a graph with the parsed nodes.
-fn create_graph_with_nodes(gtype: GraphType, nodes: List(#(Int, n))) -> Graph(n, e) {
+fn create_graph_with_nodes(
+  gtype: GraphType,
+  nodes: List(#(Int, n)),
+) -> Graph(n, e) {
   list.fold(nodes, model.new(gtype), fn(graph, pair) {
     let #(id, data) = pair
     model.add_node(graph, id, data)
@@ -734,7 +751,10 @@ fn parse_edges(
         "*arcs" | "*edges" -> do_parse_edges(rest, edge_parser, graph, [])
         _ -> {
           // Unknown section, skip
-          parse_edges(rest, edge_parser, graph, [#(line_num, section), ..warnings])
+          parse_edges(rest, edge_parser, graph, [
+            #(line_num, section),
+            ..warnings
+          ])
         }
       }
     }
@@ -761,17 +781,26 @@ fn do_parse_edges(
             Ok(#(src, dst, data)) -> {
               // Add edge to graph (ensure nodes exist)
               let graph_with_nodes = ensure_nodes_exist(graph, src, dst)
-              case model.add_edge(graph_with_nodes, from: src, to: dst, with: data) {
-                Ok(new_graph) -> do_parse_edges(rest, edge_parser, new_graph, warnings)
+              case
+                model.add_edge(graph_with_nodes, from: src, to: dst, with: data)
+              {
+                Ok(new_graph) ->
+                  do_parse_edges(rest, edge_parser, new_graph, warnings)
                 Error(_) -> {
                   // Edge couldn't be added, skip with warning
-                  do_parse_edges(rest, edge_parser, graph_with_nodes, [#(line_num, line), ..warnings])
+                  do_parse_edges(rest, edge_parser, graph_with_nodes, [
+                    #(line_num, line),
+                    ..warnings
+                  ])
                 }
               }
             }
             Error(_) -> {
               // Skip malformed line with warning
-              do_parse_edges(rest, edge_parser, graph, [#(line_num, line), ..warnings])
+              do_parse_edges(rest, edge_parser, graph, [
+                #(line_num, line),
+                ..warnings
+              ])
             }
           }
         }
@@ -781,7 +810,10 @@ fn do_parse_edges(
 }
 
 /// Parse an edge/arc line: source target [weight]
-fn parse_edge_line(line: String, edge_parser: fn(Option(Float)) -> e) -> Result(#(Int, Int, e), Nil) {
+fn parse_edge_line(
+  line: String,
+  edge_parser: fn(Option(Float)) -> e,
+) -> Result(#(Int, Int, e), Nil) {
   let parts =
     line
     |> string.split(" ")
@@ -814,7 +846,11 @@ fn parse_edge_line(line: String, edge_parser: fn(Option(Float)) -> e) -> Result(
 /// Ensure both source and target nodes exist in the graph.
 /// For Pajek, nodes should always exist from the *Vertices section,
 /// so this is a safety measure that should not be needed for well-formed files.
-fn ensure_nodes_exist(graph: Graph(n, e), _src: NodeId, _tgt: NodeId) -> Graph(n, e) {
+fn ensure_nodes_exist(
+  graph: Graph(n, e),
+  _src: NodeId,
+  _tgt: NodeId,
+) -> Graph(n, e) {
   // Nodes should already exist from *Vertices section
   // This function is a placeholder for type compatibility
   graph
@@ -839,11 +875,7 @@ fn ensure_nodes_exist(graph: Graph(n, e), _src: NodeId, _tgt: NodeId) -> Graph(n
 /// }
 /// ```
 pub fn parse(input: String) -> Result(PajekResult(String, String), PajekError) {
-  parse_with(
-    input,
-    node_parser: fn(s) { s },
-    edge_parser: fn(_) { "" },
-  )
+  parse_with(input, node_parser: fn(s) { s }, edge_parser: fn(_) { "" })
 }
 
 // =============================================================================

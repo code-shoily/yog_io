@@ -5,9 +5,54 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.6.0] - Unreleased
+## [0.9.0] - 2026-03-21
 
 ### Added
+
+- **TGF Support** (`yog_io/tgf`)
+  - `serialize/1` - Serialize String graphs to Trivial Graph Format
+  - `serialize_with/2` - Serialize with custom label functions
+  - `parse/2` - Parse TGF string to graph with custom parsers
+  - `parse_with/4` - Parse with custom node and edge parsers
+  - `read/2` - Read TGF file into graph
+  - `read_with/4` - Read with custom parsers
+  - `write/2` - Write String graph to TGF file
+  - `write_with/3` - Write with custom label functions
+  - `options_with/2` - Create custom serialization options
+  - `default_options/0` - Get default TGF options
+
+- **LEDA Support** (`yog_io/leda`)
+  - `serialize/1` - Serialize String graphs to LEDA format
+  - `serialize_with/2` - Serialize with custom serializers
+  - `parse/1` - Parse LEDA string to graph
+  - `parse_with/3` - Parse with custom node and edge parsers
+  - `read/1` - Read LEDA file into graph
+  - `read_with/3` - Read with custom parsers
+  - `write/2` - Write String graph to LEDA file
+  - `write_with/3` - Write with custom serializers
+  - `options_with/4` - Create custom serialization options
+  - `to_string/1` - Alias for serialize
+
+- **Pajek Support** (`yog_io/pajek`)
+  - `serialize/1` - Serialize String graphs to Pajek .net format
+  - `serialize_with/2` - Serialize with custom options
+  - `parse/1` - Parse Pajek string to graph
+  - `parse_with/3` - Parse with custom node and edge parsers
+  - `read/1` - Read Pajek file into graph
+  - `read_with/3` - Read with custom parsers
+  - `write/2` - Write String graph to Pajek file
+  - `write_with/3` - Write with custom options
+  - `options_with/5` - Create custom serialization options
+  - `default_options/0` - Get default Pajek options
+  - `default_node_attributes/0` - Get default visual attributes
+  - `to_string/1` - Alias for serialize
+
+- **MultiGraph JSON Support** (`yog_io/json`)
+  - `to_json_multi/2` - Export MultiGraph to JSON with edge IDs
+  - `to_json_file_multi/3` - Export MultiGraph directly to JSON file
+  - Support for parallel edges with unique edge identifiers
+  - All format presets (Generic, D3Force, Cytoscape, VisJs, NetworkX) support multigraphs
+  - `"multigraph": true` metadata flag in Generic and NetworkX formats
 
 - **JSON Support** (`yog_io/json`)
   - `to_json/2` - Export graph to JSON string with format options
@@ -41,45 +86,97 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Features
 
-- Generic type support for nodes and edges (not limited to String)
-- Custom serializers for any data type
-- Multiple format presets for popular visualization libraries
-- Rich metadata support with custom fields
-- File I/O operations with comprehensive error handling
-- Pretty printing support
-- Proper handling of directed and undirected graphs
-- Edge deduplication for undirected graphs
+- **TGF Format**
+  - Human-readable text format with minimal syntax
+  - Auto-node creation for lenient parsing
+  - Support for nodes without labels (defaults to ID)
+  - Multi-word labels with space handling
+  - Warning collection for malformed lines
+  - 1-based node indexing
+
+- **LEDA Format**
+  - LEDA Library compatibility for academic research
+  - 1-indexed sequential node IDs
+  - Strict node reference validation
+  - Support for typed node and edge data
+  - Reversal edge indices for undirected graphs
+  - Comprehensive error reporting with line numbers
+
+- **Pajek Format**
+  - Social network analysis standard (.net files)
+  - Multi-word quoted labels support
+  - Case-insensitive section headers
+  - Visual attributes (coordinates, shapes, colors, sizes)
+  - Weighted edges with optional float values
+  - Comment handling (% lines)
+  - Graph type auto-detection (*Arcs vs *Edges)
+
+- **MultiGraph Support**
+  - Parallel edges with unique edge IDs
+  - All JSON formats support multigraphs
+  - Proper edge ID assignment and tracking
+  - Metadata flags for multigraph detection
+
+- **JSON Formats**
+  - Generic type support for nodes and edges (not limited to String)
+  - Custom serializers for any data type
+  - Multiple format presets for popular visualization libraries
+  - Rich metadata support with custom fields
+  - File I/O operations with comprehensive error handling
+  - Pretty printing support
+  - Proper handling of directed and undirected graphs
+  - Edge deduplication for undirected graphs
 
 ### Testing
 
-- Comprehensive test suite with 71 tests including:
-  - Format-specific tests (Generic, D3, Cytoscape, vis.js, NetworkX)
-  - Custom serializer tests
+- Comprehensive test suite with 153 tests including:
+  - **TGF**: 23 tests (serialization, parsing, roundtrip, auto-node creation, error handling)
+  - **LEDA**: 22 tests (serialization, parsing, node ID mapping, strict validation, error handling)
+  - **Pajek**: 18 tests (serialization, parsing, multi-word labels, visual attributes, comments)
+  - **JSON**: 29 tests (Generic, D3, Cytoscape, vis.js, NetworkX formats)
+  - **MultiGraph JSON**: 8 tests (parallel edges, all formats, metadata flags)
+  - **GraphML**: 31 tests (serialization, deserialization, roundtrip, attributes)
+  - **GDF**: 22 tests (serialization, deserialization, weighted edges, attributes)
+  - Format-specific tests for each supported format
+  - Custom serializer/parser tests
   - Metadata inclusion tests
   - File I/O tests
-  - Edge case tests (empty graphs, single nodes)
-
-### Documentation
-
-- **[GRAPH_TYPES_JSON.md](GRAPH_TYPES_JSON.md)** - Comprehensive guide for exporting different graph types (Graph, MultiGraph, DAG)
-  - Current support status for each graph type
-  - Format requirements for MultiGraph support (planned)
-  - How to export DAGs using `dag.to_graph()`
-  - Compatibility matrix for all formats
+  - Edge case tests (empty graphs, single nodes, malformed input)
+  - Warning collection and error reporting tests
 
 ### References
 
-- Based on, and will eventually replace: [yog/render/json](../yog/src/yog/render/json.gleam)
-- Format presets compatible with:
+- **TGF**: [Wikipedia - Trivial Graph Format](https://en.wikipedia.org/wiki/Trivial_Graph_Format), [yEd TGF Import](https://yed.yworks.com/support/manual/tgf.html)
+- **LEDA**: [LEDA Library](https://www.algorithmic-solutions.com/leda/), [NetworkX LEDA](https://networkx.org/documentation/stable/reference/readwrite/leda.html)
+- **Pajek**: [Pajek Software](http://mrvar.fdv.uni-lj.si/pajek/), [Format Specification](http://mrvar.fdv.uni-lj.si/pajek/dokuwiki/doku.php?id=description_of_net_file_format)
+- **JSON**: Replaces [yog/render/json](https://github.com/code-shoily/yog/blob/main/src/yog/render/json.gleam)
   - [D3.js](https://d3js.org/)
   - [Cytoscape.js](https://js.cytoscape.org/)
   - [vis.js](https://visjs.github.io/vis-network/)
   - [NetworkX](https://networkx.org/)
+- **GraphML**: [GraphML Specification](http://graphml.graphdrawing.org/specification.html)
+- **GDF**: [Gephi GDF Format](https://gephi.org/users/supported-graph-formats/gdf-format/)
+
+### Format Compatibility
+
+| Format | Directed | Undirected | Weighted | Attributes | MultiGraph | Visual |
+|--------|----------|------------|----------|------------|------------|--------|
+| TGF | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| LEDA | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
+| Pajek | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ |
+| JSON (all) | ✅ | ✅ | ✅ | ✅ | ✅ | Partial |
+| GraphML | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ |
+| GDF | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ |
+
+### Breaking Changes
+
+- None (new major version 1.0.0)
 
 ### Known Limitations
 
-- MultiGraph support not yet implemented (multiple parallel edges between same nodes)
 - DAG export requires manual conversion via `dag.to_graph()` (no acyclicity flag in metadata yet)
+- MultiGraph support only available for JSON formats (not GraphML, GDF, TGF, LEDA, or Pajek)
+- JSON import/deserialization not yet implemented (export-only)
 
 ## [0.5.0] - 2025-03-20
 

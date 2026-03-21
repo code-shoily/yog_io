@@ -6,6 +6,7 @@ import gleeunit
 import gleeunit/should
 import simplifile
 import yog/model.{Directed, Undirected}
+import yog/multi/model as multi
 import yog_io/json as yog_json
 
 pub fn main() {
@@ -346,5 +347,261 @@ pub fn single_node_test() {
 
   json_string
   |> string.contains("\"Lonely\"")
+  |> should.be_true()
+}
+
+// =============================================================================
+// MultiGraph Export Tests
+// =============================================================================
+
+pub fn to_json_multi_generic_format_test() {
+  let graph =
+    multi.new(Directed)
+    |> multi.add_node(1, "Alice")
+    |> multi.add_node(2, "Bob")
+
+  let #(graph, _) = multi.add_edge(graph, from: 1, to: 2, with: "follows")
+  let #(graph, _) = multi.add_edge(graph, from: 1, to: 2, with: "mentions")
+  let #(graph, _) = multi.add_edge(graph, from: 1, to: 2, with: "likes")
+
+  let json_string =
+    yog_json.to_json_multi(graph, yog_json.default_export_options())
+
+  // Should contain Generic format structure
+  json_string
+  |> string.contains("\"format\":\"yog-generic\"")
+  |> should.be_true()
+
+  // Should mark as multigraph
+  json_string
+  |> string.contains("\"multigraph\":true")
+  |> should.be_true()
+
+  // Should include edge IDs
+  json_string
+  |> string.contains("\"id\":")
+  |> should.be_true()
+
+  // Should have 3 edges (parallel edges)
+  json_string
+  |> string.contains("\"edge_count\":3")
+  |> should.be_true()
+}
+
+pub fn to_json_multi_parallel_edges_test() {
+  // Create multigraph with parallel edges
+  let graph =
+    multi.new(Directed)
+    |> multi.add_node(1, "A")
+    |> multi.add_node(2, "B")
+
+  let #(graph, _) = multi.add_edge(graph, from: 1, to: 2, with: "edge1")
+  let #(graph, _) = multi.add_edge(graph, from: 1, to: 2, with: "edge2")
+  let #(graph, _) = multi.add_edge(graph, from: 1, to: 2, with: "edge3")
+
+  let json_string =
+    yog_json.to_json_multi(graph, yog_json.default_export_options())
+
+  // All three edges should be present
+  json_string
+  |> string.contains("\"edge1\"")
+  |> should.be_true()
+
+  json_string
+  |> string.contains("\"edge2\"")
+  |> should.be_true()
+
+  json_string
+  |> string.contains("\"edge3\"")
+  |> should.be_true()
+}
+
+pub fn to_json_multi_d3_format_test() {
+  let graph =
+    multi.new(Directed)
+    |> multi.add_node(1, "Alice")
+    |> multi.add_node(2, "Bob")
+
+  let #(graph, _) = multi.add_edge(graph, from: 1, to: 2, with: "follows")
+  let #(graph, _) = multi.add_edge(graph, from: 1, to: 2, with: "mentions")
+
+  let options =
+    yog_json.JsonExportOptions(
+      ..yog_json.default_export_options(),
+      format: yog_json.D3Force,
+    )
+
+  let json_string = yog_json.to_json_multi(graph, options)
+
+  // D3 format uses "links" instead of "edges"
+  json_string
+  |> string.contains("\"links\"")
+  |> should.be_true()
+
+  // Should include edge IDs for parallel edges
+  json_string
+  |> string.contains("\"id\":")
+  |> should.be_true()
+}
+
+pub fn to_json_multi_cytoscape_format_test() {
+  let graph =
+    multi.new(Directed)
+    |> multi.add_node(1, "Node1")
+    |> multi.add_node(2, "Node2")
+
+  let #(graph, _) = multi.add_edge(graph, from: 1, to: 2, with: "edge1")
+  let #(graph, _) = multi.add_edge(graph, from: 1, to: 2, with: "edge2")
+
+  let options =
+    yog_json.JsonExportOptions(
+      ..yog_json.default_export_options(),
+      format: yog_json.Cytoscape,
+    )
+
+  let json_string = yog_json.to_json_multi(graph, options)
+
+  // Cytoscape format uses "elements"
+  json_string
+  |> string.contains("\"elements\"")
+  |> should.be_true()
+
+  // Edge IDs should use "e" prefix
+  json_string
+  |> string.contains("\"e0\"")
+  |> should.be_true()
+
+  json_string
+  |> string.contains("\"e1\"")
+  |> should.be_true()
+}
+
+pub fn to_json_multi_visjs_format_test() {
+  let graph =
+    multi.new(Undirected)
+    |> multi.add_node(1, "A")
+    |> multi.add_node(2, "B")
+
+  let #(graph, _) = multi.add_edge(graph, from: 1, to: 2, with: "connection1")
+  let #(graph, _) = multi.add_edge(graph, from: 1, to: 2, with: "connection2")
+
+  let options =
+    yog_json.JsonExportOptions(
+      ..yog_json.default_export_options(),
+      format: yog_json.VisJs,
+    )
+
+  let json_string = yog_json.to_json_multi(graph, options)
+
+  // vis.js uses "from" and "to"
+  json_string
+  |> string.contains("\"from\"")
+  |> should.be_true()
+
+  json_string
+  |> string.contains("\"to\"")
+  |> should.be_true()
+
+  // Should include numeric edge IDs
+  json_string
+  |> string.contains("\"id\":")
+  |> should.be_true()
+}
+
+pub fn to_json_multi_networkx_format_test() {
+  let graph =
+    multi.new(Directed)
+    |> multi.add_node(1, "Alice")
+    |> multi.add_node(2, "Bob")
+
+  let #(graph, _) = multi.add_edge(graph, from: 1, to: 2, with: "follows")
+  let #(graph, _) = multi.add_edge(graph, from: 1, to: 2, with: "mentions")
+
+  let options =
+    yog_json.JsonExportOptions(
+      ..yog_json.default_export_options(),
+      format: yog_json.NetworkX,
+    )
+
+  let json_string = yog_json.to_json_multi(graph, options)
+
+  // NetworkX format should have multigraph flag
+  json_string
+  |> string.contains("\"multigraph\":true")
+  |> should.be_true()
+
+  // Should be directed
+  json_string
+  |> string.contains("\"directed\":true")
+  |> should.be_true()
+
+  // Should have links (NetworkX uses "links" not "edges")
+  json_string
+  |> string.contains("\"links\"")
+  |> should.be_true()
+}
+
+pub fn to_json_file_multi_test() {
+  let graph =
+    multi.new(Directed)
+    |> multi.add_node(1, "Alice")
+    |> multi.add_node(2, "Bob")
+
+  let #(graph, _) = multi.add_edge(graph, from: 1, to: 2, with: "follows")
+  let #(graph, _) = multi.add_edge(graph, from: 1, to: 2, with: "mentions")
+
+  let temp_path = "test_multi_output.json"
+
+  // Export to file
+  let assert Ok(_) =
+    yog_json.to_json_file_multi(
+      graph,
+      temp_path,
+      yog_json.default_export_options(),
+    )
+
+  // Read file back
+  let assert Ok(contents) = simplifile.read(temp_path)
+
+  // Verify contents
+  contents
+  |> string.contains("\"multigraph\":true")
+  |> should.be_true()
+
+  contents
+  |> string.contains("\"Alice\"")
+  |> should.be_true()
+
+  // Cleanup
+  let _ = simplifile.delete(temp_path)
+}
+
+pub fn to_json_multi_undirected_test() {
+  let graph =
+    multi.new(Undirected)
+    |> multi.add_node(1, "A")
+    |> multi.add_node(2, "B")
+    |> multi.add_node(3, "C")
+
+  let #(graph, _) = multi.add_edge(graph, from: 1, to: 2, with: "edge1")
+  let #(graph, _) = multi.add_edge(graph, from: 1, to: 2, with: "edge2")
+  let #(graph, _) = multi.add_edge(graph, from: 2, to: 3, with: "edge3")
+
+  let json_string =
+    yog_json.to_json_multi(graph, yog_json.default_export_options())
+
+  // Should mark as undirected
+  json_string
+  |> string.contains("\"graph_type\":\"undirected\"")
+  |> should.be_true()
+
+  // Should be multigraph
+  json_string
+  |> string.contains("\"multigraph\":true")
+  |> should.be_true()
+
+  // Should have 3 edges
+  json_string
+  |> string.contains("\"edge_count\":3")
   |> should.be_true()
 }

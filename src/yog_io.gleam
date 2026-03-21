@@ -540,7 +540,9 @@ pub fn to_leda(graph: Graph(String, String)) -> String {
 ///   Error(e) -> handle_error(e)
 /// }
 /// ```
-pub fn read_pajek(path: String) -> Result(pajek.PajekResult(String, String), pajek.PajekError) {
+pub fn read_pajek(
+  path: String,
+) -> Result(pajek.PajekResult(String, String), pajek.PajekError) {
   pajek.read(path)
 }
 
