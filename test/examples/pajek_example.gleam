@@ -1,5 +1,6 @@
 import gleam/io
 import yog/model
+import yog_io/pajek
 
 /// Example demonstrating Pajek format export
 ///
@@ -14,27 +15,21 @@ pub fn main() {
   io.println("=== Pajek Format Example ===\n")
 
   // Create a simple social network
-  let assert Ok(_graph) =
+  let graph =
     model.new(model.Directed)
     |> model.add_node(1, "Alice Smith")
     |> model.add_node(2, "Bob Jones")
     |> model.add_node(3, "Carol Williams")
-    |> model.add_edges([
-      #(1, 2, "follows"),
-      #(2, 3, "knows"),
-      #(3, 1, "mentions"),
-    ])
+
+  let assert Ok(graph) = model.add_edge(graph, from: 1, to: 2, with: "follows")
+  let assert Ok(graph) = model.add_edge(graph, from: 2, to: 3, with: "knows")
+  let assert Ok(graph) = model.add_edge(graph, from: 3, to: 1, with: "mentions")
 
   // Export to Pajek (directed graph uses *Arcs)
+  let pajek_string = pajek.serialize(graph)
+
   io.println("Output:")
-  io.println("*Vertices 3")
-  io.println("1 \"Alice Smith\"")
-  io.println("2 \"Bob Jones\"")
-  io.println("3 \"Carol Williams\"")
-  io.println("*Arcs")
-  io.println("1 2")
-  io.println("2 3")
-  io.println("3 1")
+  io.println(pajek_string)
 
   io.println("\nKey Features:")
   io.println("  - Multi-word labels enclosed in quotes")
@@ -45,21 +40,19 @@ pub fn main() {
   // Example with undirected graph
   io.println("\n=== Pajek Undirected Graph ===\n")
 
-  let assert Ok(_graph2) =
+  let graph2 =
     model.new(model.Undirected)
     |> model.add_node(1, "Node A")
     |> model.add_node(2, "Node B")
     |> model.add_node(3, "Node C")
-    |> model.add_edges([#(1, 2, ""), #(2, 3, "")])
+
+  let assert Ok(graph2) = model.add_edge(graph2, from: 1, to: 2, with: "")
+  let assert Ok(graph2) = model.add_edge(graph2, from: 2, to: 3, with: "")
+
+  let pajek_string2 = pajek.serialize(graph2)
 
   io.println("Output:")
-  io.println("*Vertices 3")
-  io.println("1 \"Node A\"")
-  io.println("2 \"Node B\"")
-  io.println("3 \"Node C\"")
-  io.println("*Edges")
-  io.println("1 2")
-  io.println("2 3")
+  io.println(pajek_string2)
 
   io.println("\nNote: Uses *Edges instead of *Arcs for undirected graphs")
 }
