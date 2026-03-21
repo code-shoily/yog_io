@@ -39,19 +39,16 @@ pub fn main() {
     ])
   }
 
-  // Serialize with proper types for Gephi
-  let xml = graphml.serialize_with_types(node_attrs, edge_attrs, graph)
-
-  // Write to file
+  // Write to file with proper types for Gephi
   let assert Ok(Nil) =
     graphml.write_with_types(
-      "social_network.graphml",
+      "output/social_network.graphml",
       node_attrs,
       edge_attrs,
       graph,
     )
   // Now you can:
-  // 1. Open social_network.graphml in Gephi
+  // 1. Open output/social_network.graphml in Gephi
   // 2. Use "age" and "influence" for numeric visualizations (size nodes by influence)
   // 3. Use "weight" for weighted layouts (ForceAtlas2 with edge weights)
   // 4. Filter nodes by age range

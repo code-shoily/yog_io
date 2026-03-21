@@ -3,13 +3,15 @@
 [![Package Version](https://img.shields.io/hexpm/v/yog_io)](https://hex.pm/packages/yog_io)
 [![Hex Docs](https://img.shields.io/badge/hex-docs-ffaff3)](https://hexdocs.pm/yog_io/)
 
-Graph file format I/O for the [yog](https://hex.pm/packages/yog) graph library. Provides serialization and deserialization support for popular graph file formats including GraphML and GDF.
+Graph file format I/O for the [yog](https://hex.pm/packages/yog) graph library. Provides serialization and deserialization support for popular graph file formats including GraphML, GDF, and JSON.
 
 ## Features
 
 - **GraphML Support** - Full XML-based graph format support compatible with Gephi, yEd, Cytoscape, and NetworkX
 - **Gephi-Optimized** - Typed attributes (int, double, boolean) for proper Gephi visualizations and analysis
 - **GDF Support** - Simple CSV-like format used by Gephi and GUESS
+- **JSON Support** - Multiple JSON formats for web visualization libraries (D3.js, Cytoscape.js, vis.js, NetworkX)
+- **Generic Types** - Work with any node and edge data types using custom serializers
 - **Custom Attributes** - Map your domain types to graph attributes with custom mappers
 - **JS Compatible** - Uses `xmlm` for XML parsing and `simplifile` for file operations
 - **Type Safe** - Leverages Gleam's type system for safe graph serialization
@@ -51,6 +53,10 @@ pub fn main() {
   // Or use GDF format
   let assert Ok(Nil) = yog_io.write_gdf("graph.gdf", graph)
   let assert Ok(loaded_gdf) = yog_io.read_gdf("graph.gdf")
+
+  // Or export to JSON for web visualization
+  let assert Ok(Nil) = yog_io.write_json("graph.json", graph)
+  let json_string = yog_io.to_json(graph)
 }
 ```
 
@@ -277,6 +283,187 @@ let options = gdf.GdfOptions(
 let gdf_string = gdf.serialize_with(node_attr, edge_attr, options, graph)
 ```
 
+### JSON Format
+
+JSON format export for web visualization libraries and data exchange. Supports multiple format presets for popular visualization tools.
+
+```gleam
+import yog/model.{Directed}
+import yog_io/json
+
+// Basic serialization for String graphs
+let assert Ok(graph) =
+  model.new(Directed)
+  |> model.add_node(1, "Alice")
+  |> model.add_node(2, "Bob")
+  |> model.add_edge(from: 1, to: 2, with: "follows")
+
+// Export to JSON string with default options
+let json_string = json.to_json(graph, json.default_export_options())
+
+// Export to file
+let assert Ok(Nil) = json.to_json_file(
+  graph,
+  "graph.json",
+  json.default_export_options(),
+)
+```
+
+#### Format Presets
+
+The JSON module supports multiple format presets for different visualization libraries:
+
+**D3.js Force-Directed Format**
+
+```gleam
+import gleam/json as gleam_json
+import gleam/option
+
+let d3_options = json.JsonExportOptions(
+  format: json.D3Force,
+  include_metadata: False,
+  node_serializer: option.Some(gleam_json.string),
+  edge_serializer: option.Some(gleam_json.string),
+  pretty: True,
+  metadata: option.None,
+)
+
+let d3_json = json.to_json(graph, d3_options)
+// Or use the convenience function
+let d3_json = json.to_d3_json(graph, gleam_json.string, gleam_json.string)
+```
+
+**Cytoscape.js Format**
+
+```gleam
+let cyto_json = json.to_cytoscape_json(graph, gleam_json.string, gleam_json.string)
+```
+
+**vis.js Format**
+
+```gleam
+let visjs_json = json.to_visjs_json(graph, gleam_json.string, gleam_json.string)
+```
+
+**NetworkX Format (Python compatibility)**
+
+```gleam
+let nx_options = json.JsonExportOptions(
+  format: json.NetworkX,
+  include_metadata: False,
+  node_serializer: option.Some(gleam_json.string),
+  edge_serializer: option.Some(gleam_json.string),
+  pretty: True,
+  metadata: option.None,
+)
+
+let nx_json = json.to_json(graph, nx_options)
+```
+
+#### Custom Types with JSON
+
+Use custom serializers to export graphs with any data types:
+
+```gleam
+import gleam/dict
+import gleam/json as gleam_json
+import gleam/option
+
+pub type Person {
+  Person(name: String, age: Int, role: String)
+}
+
+let assert Ok(graph) =
+  model.new(Directed)
+  |> model.add_node(1, Person("Alice", 30, "Engineer"))
+  |> model.add_node(2, Person("Bob", 25, "Designer"))
+  |> model.add_edge(from: 1, to: 2, with: 5)
+
+let options = json.export_options_with(
+  fn(person: Person) {
+    gleam_json.object([
+      #("name", gleam_json.string(person.name)),
+      #("age", gleam_json.int(person.age)),
+      #("role", gleam_json.string(person.role)),
+    ])
+  },
+  fn(weight) { gleam_json.int(weight) },
+)
+
+let json_string = json.to_json(graph, options)
+```
+
+#### JSON with Metadata
+
+Add custom metadata to your JSON exports:
+
+```gleam
+import gleam/dict
+
+let metadata = dict.from_list([
+  #("description", gleam_json.string("Social Network")),
+  #("version", gleam_json.string("1.0")),
+  #("tags", gleam_json.array(
+    [gleam_json.string("social"), gleam_json.string("network")],
+    of: fn(x) { x },
+  )),
+])
+
+let options = json.JsonExportOptions(
+  ..json.default_export_options(),
+  metadata: option.Some(metadata),
+)
+
+let json_string = json.to_json(graph, options)
+```
+
+#### Generic Format Output
+
+The default Generic format includes full metadata:
+
+```json
+{
+  "format": "yog-generic",
+  "version": "2.0",
+  "metadata": {
+    "graph_type": "directed",
+    "node_count": 2,
+    "edge_count": 1
+  },
+  "nodes": [
+    { "id": 1, "data": "Alice" },
+    { "id": 2, "data": "Bob" }
+  ],
+  "edges": [
+    { "source": 1, "target": 2, "data": "follows" }
+  ]
+}
+```
+
+#### Exporting DAGs (Directed Acyclic Graphs)
+
+DAGs can be exported by first converting them to a regular graph:
+
+```gleam
+import yog/dag/models as dag
+import yog_io/json
+
+// You have a DAG
+let my_dag: dag.Dag(String, String) = ...
+
+// Convert to Graph and export
+let graph = dag.to_graph(my_dag)
+let json_string = json.to_json(graph, json.default_export_options())
+```
+
+The output will include `"graph_type": "directed"` in the metadata. The acyclicity property is a semantic constraint that is preserved by the DAG type but not explicitly indicated in the JSON output.
+
+#### MultiGraph Support
+
+**Note:** The current JSON implementation supports simple graphs (at most one edge between any pair of nodes). Support for MultiGraphs (multiple parallel edges between nodes) is planned for a future release.
+
+For details on how different graph types will be represented, see [GRAPH_TYPES_JSON.md](GRAPH_TYPES_JSON.md).
+
 ## Module Overview
 
 | Module | Purpose |
@@ -284,6 +471,7 @@ let gdf_string = gdf.serialize_with(node_attr, edge_attr, options, graph)
 | `yog_io` | Convenience functions for common operations |
 | `yog_io/graphml` | Full GraphML support with custom mappers |
 | `yog_io/gdf` | Full GDF support with custom mappers |
+| `yog_io/json` | JSON export with multiple format presets |
 
 ## Format Support
 
@@ -305,6 +493,18 @@ let gdf_string = gdf.serialize_with(node_attr, edge_attr, options, graph)
 - ✅ CSV-style escaping (quotes, separators)
 - ✅ Custom separators and type annotations
 - ✅ Weighted graph convenience functions
+
+### JSON
+
+- ✅ Generic format with full metadata
+- ✅ D3.js force-directed format
+- ✅ Cytoscape.js elements format
+- ✅ vis.js network format
+- ✅ NetworkX node-link format
+- ✅ Custom node and edge serializers
+- ✅ Generic type support (not limited to String)
+- ✅ File I/O operations
+- ✅ Custom metadata fields
 
 ## File Format Examples
 
@@ -339,6 +539,41 @@ edgedef>node1 VARCHAR,node2 VARCHAR,directed BOOLEAN,label VARCHAR
 1,2,true,friend
 ```
 
+### JSON Example (Generic Format)
+
+```json
+{
+  "format": "yog-generic",
+  "version": "2.0",
+  "metadata": {
+    "graph_type": "directed",
+    "node_count": 2,
+    "edge_count": 1
+  },
+  "nodes": [
+    { "id": 1, "data": "Alice" },
+    { "id": 2, "data": "Bob" }
+  ],
+  "edges": [
+    { "source": 1, "target": 2, "data": "friend" }
+  ]
+}
+```
+
+### JSON Example (D3.js Format)
+
+```json
+{
+  "nodes": [
+    { "id": "1" },
+    { "id": "2" }
+  ],
+  "links": [
+    { "source": "1", "target": "2", "value": "friend" }
+  ]
+}
+```
+
 ## Development
 
 ```sh
@@ -348,15 +583,27 @@ gleam test
 # Run specific test module
 gleam test yog_io/graphml_test
 gleam test yog_io/gdf_test
+gleam test yog_io/json_test
+
+# Run examples (output files are written to output/ directory)
+gleam run -m examples/json_export_example
+gleam run -m examples/gephi_example
 
 # Build documentation
 gleam docs
 ```
 
+**Note:** Example outputs (JSON files, GraphML files, etc.) are written to the `output/` directory, which is ignored by git.
+
 ## References
 
 - [GraphML Specification](http://graphml.graphdrawing.org/specification.html)
 - [GDF Format](https://gephi.org/users/supported-graph-formats/gdf-format/)
+- [JSON Specification](https://www.json.org/)
+- [D3.js Documentation](https://d3js.org/)
+- [Cytoscape.js Documentation](https://js.cytoscape.org/)
+- [vis.js Documentation](https://visjs.github.io/vis-network/)
+- [NetworkX JSON Format](https://networkx.org/documentation/stable/reference/readwrite/json_graph.html)
 - [yog Graph Library](https://hex.pm/packages/yog)
 
 ## License

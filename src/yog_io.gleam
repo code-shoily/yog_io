@@ -3,6 +3,7 @@
 //// Provides serialization and deserialization support for popular graph file formats:
 //// - **GraphML** - XML-based format supported by Gephi, yEd, Cytoscape, and NetworkX
 //// - **GDF** - Simple CSV-like format used by Gephi
+//// - **JSON** - Multiple formats for web visualization libraries (D3.js, Cytoscape.js, vis.js, etc.)
 ////
 //// ## Quick Start
 ////
@@ -35,10 +36,13 @@
 ////
 //// For more control over serialization, use the submodules directly.
 
+import gleam/json as gleam_json
+import gleam/option
 import simplifile
 import yog/model.{type Graph}
 import yog_io/gdf
 import yog_io/graphml
+import yog_io/json
 
 // Re-export types
 pub type NodeAttributes =
@@ -64,6 +68,15 @@ pub type GraphMLOptions =
 
 pub type GdfOptions =
   gdf.GdfOptions
+
+pub type JsonFormat =
+  json.JsonFormat
+
+pub type JsonExportOptions(n, e) =
+  json.JsonExportOptions(n, e)
+
+pub type JsonError =
+  json.JsonError
 
 // Re-export AttributeType constructors for convenience
 pub const string_type = graphml.StringType
@@ -178,4 +191,128 @@ pub fn default_graphml_options() -> GraphMLOptions {
 /// Default options for GDF serialization.
 pub fn default_gdf_options() -> GdfOptions {
   gdf.default_options()
+}
+
+/// Default options for JSON export.
+pub fn default_json_options() -> JsonExportOptions(String, String) {
+  json.default_export_options()
+}
+
+// =============================================================================
+// JSON FUNCTIONS
+// =============================================================================
+
+/// Writes a graph to a JSON file.
+///
+/// This is a convenience function for graphs with string data.
+/// For custom data types, use `json.to_json_file` with custom serializers.
+///
+/// ## Example
+///
+/// ```gleam
+/// import yog/model.{Directed}
+///
+/// let graph =
+///   model.new(Directed)
+///   |> model.add_node(1, "Alice")
+///   |> model.add_node(2, "Bob")
+///
+/// let assert Ok(graph) = model.add_edge(graph, from: 1, to: 2, with: "follows")
+///
+/// let assert Ok(Nil) = yog_io.write_json("graph.json", graph)
+/// ```
+pub fn write_json(
+  path: String,
+  graph: Graph(String, String),
+) -> Result(Nil, JsonError) {
+  json.to_json_file(graph, path, json.default_export_options())
+}
+
+/// Converts a graph to a JSON string.
+///
+/// This is a convenience function for graphs with string data.
+///
+/// ## Example
+///
+/// ```gleam
+/// import yog/model.{Directed}
+///
+/// let graph =
+///   model.new(Directed)
+///   |> model.add_node(1, "Alice")
+///   |> model.add_node(2, "Bob")
+///
+/// let json_string = yog_io.to_json(graph)
+/// ```
+pub fn to_json(graph: Graph(String, String)) -> String {
+  json.to_json(graph, json.default_export_options())
+}
+
+/// Writes a graph to a JSON file in D3.js force-directed format.
+///
+/// ## Example
+///
+/// ```gleam
+/// let assert Ok(Nil) = yog_io.write_d3_json("graph-d3.json", graph)
+/// ```
+pub fn write_d3_json(
+  path: String,
+  graph: Graph(String, String),
+) -> Result(Nil, JsonError) {
+  let options =
+    json.JsonExportOptions(
+      format: json.D3Force,
+      include_metadata: False,
+      node_serializer: option.Some(gleam_json.string),
+      edge_serializer: option.Some(gleam_json.string),
+      pretty: True,
+      metadata: option.None,
+    )
+  json.to_json_file(graph, path, options)
+}
+
+/// Writes a graph to a JSON file in Cytoscape.js format.
+///
+/// ## Example
+///
+/// ```gleam
+/// let assert Ok(Nil) = yog_io.write_cytoscape_json("graph-cytoscape.json", graph)
+/// ```
+pub fn write_cytoscape_json(
+  path: String,
+  graph: Graph(String, String),
+) -> Result(Nil, JsonError) {
+  let options =
+    json.JsonExportOptions(
+      format: json.Cytoscape,
+      include_metadata: False,
+      node_serializer: option.Some(gleam_json.string),
+      edge_serializer: option.Some(gleam_json.string),
+      pretty: True,
+      metadata: option.None,
+    )
+  json.to_json_file(graph, path, options)
+}
+
+/// Writes a graph to a JSON file in vis.js format.
+///
+/// ## Example
+///
+/// ```gleam
+/// let assert Ok(Nil) = yog_io.write_visjs_json("graph-visjs.json", graph)
+/// ```
+pub fn write_visjs_json(
+  path: String,
+  graph: Graph(String, String),
+) -> Result(Nil, JsonError) {
+  let options =
+    json.JsonExportOptions(
+      format: json.VisJs,
+      include_metadata: False,
+      node_serializer: option.Some(gleam_json.string),
+      edge_serializer: option.Some(gleam_json.string),
+      pretty: True,
+      metadata: option.None,
+    )
+  json.to_json_file(graph, path, options)
 }
