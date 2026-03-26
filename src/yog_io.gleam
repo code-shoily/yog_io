@@ -299,9 +299,27 @@ pub fn write_json(
 ///   |> model.add_node(2, "Bob")
 ///
 /// let json_string = yog_io.to_json(graph)
+///
+/// // Read back
+/// import gleam/dynamic/decode
+/// let assert Ok(loaded) = yog_io.from_json(json_string)
 /// ```
 pub fn to_json(graph: Graph(String, String)) -> String {
   json.to_json(graph, json.default_export_options())
+}
+
+/// Parses a graph from a JSON string.
+///
+/// This is a convenience function for graphs with string data.
+pub fn from_json(input: String) -> Result(Graph(String, String), JsonError) {
+  json.from_json(input)
+}
+
+/// Reads a graph from a JSON file.
+///
+/// This is a convenience function for graphs with string data.
+pub fn read_json(path: String) -> Result(Graph(String, String), JsonError) {
+  json.read(path)
 }
 
 /// Writes a graph to a JSON file in D3.js force-directed format.

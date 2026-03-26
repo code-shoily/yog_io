@@ -289,9 +289,19 @@ let gdf_string = gdf.serialize_with(node_attr, edge_attr, options, graph)
 
 ### JSON Format
 
-JSON format export for web visualization libraries and data exchange. Supports multiple format presets for popular visualization tools.
+JSON format export for web visualization libraries and data exchange. Provides multiple format presets for popular visualization tools and supports full bidirectional I/O.
 
-**Note:** The JSON module is currently write-only. Import/read functionality is not implemented. For bidirectional I/O, consider using GraphML, GDF, TGF, LEDA, or Pajek formats.
+```gleam
+import yog/model.{Directed}
+import yog_io/json
+import gleam/dynamic/decode
+
+// Export to JSON string
+let json_string = json.to_json(graph, json.default_export_options())
+
+// Import from JSON string
+let assert Ok(graph) = json.from_json(json_string, decode.string, decode.string)
+```
 
 ```gleam
 import yog/model.{Directed}
@@ -501,7 +511,7 @@ See [test/examples/multigraph_json_example.gleam](https://github.com/code-shoily
 | `yog_io/tgf` | TGF (Trivial Graph Format) serialization and parsing |
 | `yog_io/leda` | LEDA format with strict validation |
 | `yog_io/pajek` | Pajek (.net) format for social network analysis |
-| `yog_io/json` | JSON export with multiple format presets and MultiGraph support (WRITE-ONLY) |
+| `yog_io/json` | JSON format support with multiple presets and MultiGraph support |
 | `yog_io/graphml` | Full GraphML support with custom mappers |
 | `yog_io/gdf` | Full GDF support with custom mappers |
 
@@ -537,7 +547,7 @@ See [test/examples/multigraph_json_example.gleam](https://github.com/code-shoily
 
 ### JSON
 
-**Note:** JSON module is currently WRITE-ONLY. Import/read functionality is not implemented.
+JSON module provides comprehensive support for common web-based graph formats with full bidirectional I/O.
 
 - ✅ Generic format with full metadata
 - ✅ D3.js force-directed format
@@ -545,11 +555,11 @@ See [test/examples/multigraph_json_example.gleam](https://github.com/code-shoily
 - ✅ vis.js network format
 - ✅ NetworkX node-link format
 - ✅ MultiGraph support with unique edge IDs
-- ✅ Custom node and edge serializers
+- ✅ Custom node and edge serializers/decoders
 - ✅ Generic type support (not limited to String)
-- ✅ File write operations
+- ✅ File read and write operations
 - ✅ Custom metadata fields
-- ❌ Import/read operations (not implemented)
+- ✅ Graph import and deserialization
 
 ### GraphML
 
@@ -581,7 +591,7 @@ See [test/examples/multigraph_json_example.gleam](https://github.com/code-shoily
 | GraphML | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ |
 | GDF | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ |
 
-**Note:** JSON format is write-only (export only). All other formats support bidirectional read/write operations.
+All formats now support bidirectional read/write operations.
 
 ## File Format Examples
 

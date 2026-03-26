@@ -64,11 +64,13 @@ pub fn from_matrix(
       case is_square {
         False -> Error(NotSquare(n, 0))
         True -> {
-          let graph = model.new(graph_type)
           let graph =
-            int.range(from: 0, to: n, with: graph, run: fn(g, i) {
-              model.add_node(g, i, Nil)
-            })
+            int.range(
+              from: 0,
+              to: n - 1,
+              with: model.new(graph_type),
+              run: fn(g, i) { model.add_node(g, i, Nil) },
+            )
 
           let edges = case graph_type {
             Undirected -> {
@@ -93,11 +95,11 @@ pub fn from_matrix(
             }
           }
 
-          list.try_fold(edges, graph, fn(g, e) {
+          list.fold(edges, graph, fn(g, e) {
             let #(from, to, weight) = e
-            model.add_edge(g, from: from, to: to, with: weight)
-            |> result.replace_error(NotSquare(n, n))
+            model.add_edge_ensure(g, from, to, weight, Nil)
           })
+          |> Ok
         }
       }
     }
