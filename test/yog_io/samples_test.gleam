@@ -1,5 +1,4 @@
 import gleam/dict
-import gleam/option.{None, Some}
 import gleeunit
 import gleeunit/should
 import simplifile

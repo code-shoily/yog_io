@@ -208,7 +208,7 @@ pub fn to_json(graph: Graph(n, e), options: JsonExportOptions(n, e)) -> String {
   }
 
   case options.pretty {
-    True -> json.to_string(json_obj)
+    True -> pretty_print_json(json.to_string(json_obj))
     False -> json.to_string(json_obj)
   }
 }
@@ -924,6 +924,126 @@ pub fn error_to_string(error: JsonError) -> String {
 }
 
 // =============================================================================
+// JSON PRETTY PRINTER
+// =============================================================================
+
+/// Simple JSON pretty printer that adds indentation and newlines.
+fn pretty_print_json(json_str: String) -> String {
+  let chars = string.to_graphemes(json_str)
+  let result = pretty_print_loop(chars, 0, [], [], False)
+  string.concat(list.reverse(result))
+}
+
+fn pretty_print_loop(
+  chars: List(String),
+  indent: Int,
+  acc: List(String),
+  indent_stack: List(String),
+  in_string: Bool,
+) -> List(String) {
+  case chars {
+    [] -> acc
+    [char, ..rest] -> {
+      case in_string {
+        True -> {
+          case char {
+            "\"" -> {
+              // Check if escaped
+              case acc {
+                ["\\", ..] ->
+                  pretty_print_loop(
+                    rest,
+                    indent,
+                    [char, ..acc],
+                    indent_stack,
+                    True,
+                  )
+                _ ->
+                  pretty_print_loop(
+                    rest,
+                    indent,
+                    [char, ..acc],
+                    indent_stack,
+                    False,
+                  )
+              }
+            }
+            _ ->
+              pretty_print_loop(rest, indent, [char, ..acc], indent_stack, True)
+          }
+        }
+        False -> {
+          case char {
+            "{" | "[" -> {
+              let new_indent = indent + 2
+              let indent_str = string.repeat(" ", new_indent)
+              let new_acc = case acc {
+                [] -> [char]
+                _ -> [indent_str, "\n", char, ..acc]
+              }
+              pretty_print_loop(
+                rest,
+                new_indent,
+                new_acc,
+                [indent_str, ..indent_stack],
+                False,
+              )
+            }
+            "}" | "]" -> {
+              let new_indent = int.max(0, indent - 2)
+              let new_stack = case indent_stack {
+                [_, ..st] -> st
+                [] -> []
+              }
+              let current_indent = case new_stack {
+                [s, ..] -> s
+                [] -> ""
+              }
+              let new_acc = [current_indent, "\n", char, ..acc]
+              pretty_print_loop(rest, new_indent, new_acc, new_stack, False)
+            }
+            "," -> {
+              let current_indent = case indent_stack {
+                [s, ..] -> s
+                [] -> ""
+              }
+              let new_acc = [current_indent, "\n", char, ..acc]
+              pretty_print_loop(rest, indent, new_acc, indent_stack, False)
+            }
+            ":" -> {
+              // Don't add space after colon to maintain backward compatibility
+              pretty_print_loop(
+                rest,
+                indent,
+                [char, ..acc],
+                indent_stack,
+                False,
+              )
+            }
+            " " | "\n" | "\t" -> {
+              // Skip whitespace outside strings
+              pretty_print_loop(rest, indent, acc, indent_stack, False)
+            }
+            "\"" -> {
+              pretty_print_loop(rest, indent, [char, ..acc], indent_stack, True)
+            }
+            _ -> {
+              pretty_print_loop(
+                rest,
+                indent,
+                [char, ..acc],
+                indent_stack,
+                False,
+              )
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+// =============================================================================
 // MULTIGRAPH EXPORT SUPPORT
 // =============================================================================
 
@@ -965,7 +1085,7 @@ pub fn to_json_multi(
   }
 
   case options.pretty {
-    True -> json.to_string(json_obj)
+    True -> pretty_print_json(json.to_string(json_obj))
     False -> json.to_string(json_obj)
   }
 }
