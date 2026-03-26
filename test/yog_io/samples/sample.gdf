@@ -1,0 +1,5 @@
+nodedef>name VARCHAR,label VARCHAR
+1,Alice
+2,Bob
+edgedef>node1 VARCHAR,node2 VARCHAR,directed BOOLEAN,label VARCHAR
+1,2,true,friend
