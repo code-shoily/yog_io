@@ -42,11 +42,10 @@ import gleam/dict
 import gleam/float
 import gleam/int
 import gleam/list
-import gleam/option
 import gleam/result
 import gleam/string
 import simplifile
-import yog/model.{type Graph, type GraphType, Directed, Undirected}
+import yog/model.{type Graph, type GraphType}
 
 /// Errors that can occur during Adjacency List operations
 pub type ListError {

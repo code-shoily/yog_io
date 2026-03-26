@@ -1,7 +1,7 @@
 import gleam/dict
 import gleam/list
 import gleeunit/should
-import yog/model.{Directed, Undirected}
+import yog/model.{Directed}
 import yog_io/list as list_io
 
 pub fn from_string_unweighted_test() {
