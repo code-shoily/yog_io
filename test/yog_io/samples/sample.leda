@@ -1,0 +1,9 @@
+LEDA.GRAPH
+string
+string
+-1
+2
+|{Alice}|
+|{Bob}|
+1
+1 2 0 |{friend}|

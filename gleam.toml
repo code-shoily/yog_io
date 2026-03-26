@@ -1,8 +1,8 @@
 name = "yog_io"
-version = "1.0.0"
+version = "1.1.0"
 
 targets = ["erlang", "javascript"]
-description = "Graph file format I/O for the yog graph library - GraphML, GDF, and JSON support with multiple format presets for web visualization"
+description = "Comprehensive graph file format I/O for the yog graph library - Support for GraphML, GDF, JSON (D3, Cytoscape, VisJs), TGF, LEDA, Pajek, Adjacency List/Matrix, and Matrix Market"
 licences = ["Apache-2.0"]
 repository = { type = "github", user = "code-shoily", repo = "yog_io" }
 links = [{ title = "Website", href = "https://github.com/code-shoily/yog_io" }]
@@ -17,6 +17,7 @@ yog = ">= 5.1.1 and < 6.0.0"
 
 [dev_dependencies]
 gleeunit = ">= 1.0.0 and < 2.0.0"
+qcheck = ">= 1.0.0 and < 2.0.0"
 
 [javascript]
 typescript_declarations = true

@@ -5,6 +5,69 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-03-26
+
+### Added
+
+- **JSON Deserialization** (`yog_io/json`)
+  - Full support for importing graphs from JSON files and strings.
+  - `read/1` - Read generic JSON graph file.
+  - `read_multi/1` - Read multigraph JSON file.
+  - `from_json/1` - Parse JSON string to graph.
+  - `from_json_multi/1` - Parse multigraph JSON string.
+  - Type-safe decoding using `gleam/dynamic/decode`.
+
+- **Adjacency List Support** (`yog_io/list`)
+  - New module for `.list` format I/O.
+  - `read/2`, `read_with/3` - Read adjacency list from file.
+  - `write/2`, `write_with/3` - Write graph to adjacency list file.
+  - `from_string/3` - Parse adjacency list string.
+  - `serialize/2` - Convert graph to adjacency list string.
+  - Support for weighted (`node: neighbor,weight`) and unweighted formats.
+
+- **Adjacency Matrix Support** (`yog_io/matrix`)
+  - New module for dense adjacency matrix I/O.
+  - `read/2`, `write/2` - File-based matrix operations.
+  - `from_string/1`, `serialize/1` - String-based matrix operations.
+  - `from_matrix/2`, `to_matrix/1` - Conversion between lists and graphs.
+  - Supports directed and undirected graphs (upper triangle).
+
+- **Matrix Market Support** (`yog_io/matrix_market`)
+  - New module for Matrix Market coordinate format (`.mtx`).
+  - `read/1`, `write/2` - File-based MTX operations.
+  - `from_string/1`, `serialize/1` - String-based MTX operations.
+  - Supports `real`, `integer`, and `pattern` fields.
+  - Handles `general` and `symmetric` coordinate matrices.
+
+### Changed
+
+- Renamed `to_string` to `serialize` across new modules for consistency with `gdf` and `mtx`.
+- Standardized file-based operations to use `read` and `write` naming.
+- Replaced all usages of deprecated `result.then` with `result.try`.
+- Replaced deprecated `list.range` with modern `int.range` folds.
+- Updated documentation across all modules for consistency and breadth.
+
+### Testing
+
+- Increased test suite to **202 tests** (+21).
+- Added **property-based tests** using `qcheck` for all formats.
+  - 15 new property tests covering roundtrip invariants.
+  - Structural equality verification for GraphML, JSON, and GDF.
+  - Node/edge count preservation tests for all formats.
+  - Graph type preservation and undirected symmetry tests.
+  - Random graph generators: arbitrary, path, star, empty, single-node.
+  - See [PROPERTY_TESTS.md](PROPERTY_TESTS.md) for detailed documentation.
+- Added `test/yog_io/generators.gleam` - Graph generators for property testing.
+- Added `test/yog_io/property_test.gleam` - Property-based test suite.
+- Added dedicated unit tests for `list`, `matrix`, and `matrix_market` modules.
+- Added roundtrip and sample-based integration tests for all new formats.
+
+### Fixed
+
+- Fixed `pretty` option in JSON module to actually produce formatted output.
+  - Added `pretty_print_json/1` helper for JSON pretty printing.
+  - Applied to both `to_json/2` and `to_json_multi/2`.
+
 ## [1.0.0] -  2026-03-22
 
 

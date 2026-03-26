@@ -1,4 +1,5 @@
 import gleam/dict
+import gleam/dynamic/decode
 import gleam/json
 import gleam/option
 import gleam/string
@@ -604,4 +605,48 @@ pub fn to_json_multi_undirected_test() {
   json_string
   |> string.contains("\"edge_count\":3")
   |> should.be_true()
+}
+
+// =============================================================================
+// Import Tests
+// =============================================================================
+
+pub fn from_json_test() {
+  let json_str =
+    "{\"format\":\"yog-generic\",\"version\":\"2.0\",\"metadata\":{\"graph_type\":\"directed\"},\"nodes\":[{\"id\":1,\"data\":\"Alice\"},{\"id\":2,\"data\":\"Bob\"}],\"edges\":[{\"id\":0,\"source\":1,\"target\":2,\"data\":\"follows\"}]}"
+
+  let assert Ok(graph) =
+    yog_json.from_json_with(json_str, decode.string, decode.string)
+
+  dict.size(graph.nodes) |> should.equal(2)
+  model.edge_count(graph) |> should.equal(1)
+  graph.kind |> should.equal(Directed)
+}
+
+pub fn from_json_multi_test() {
+  let json_str =
+    "{\"format\":\"yog-generic\",\"version\":\"2.0\",\"metadata\":{\"graph_type\":\"directed\",\"multigraph\":true},\"nodes\":[{\"id\":1,\"data\":\"Alice\"},{\"id\":2,\"data\":\"Bob\"}],\"edges\":[{\"id\":100,\"source\":1,\"target\":2,\"data\":\"follows\"},{\"id\":101,\"source\":1,\"target\":2,\"data\":\"mentions\"}]}"
+
+  let assert Ok(graph) =
+    yog_json.from_json_multi_with(json_str, decode.string, decode.string)
+
+  dict.size(graph.nodes) |> should.equal(2)
+  dict.size(graph.edges) |> should.equal(2)
+  graph.kind |> should.equal(Directed)
+}
+
+pub fn read_json_test() {
+  let json_str =
+    "{\"format\":\"yog-generic\",\"version\":\"2.0\",\"metadata\":{\"graph_type\":\"undirected\"},\"nodes\":[{\"id\":1,\"data\":\"A\"},{\"id\":2,\"data\":\"B\"}],\"edges\":[{\"id\":0,\"source\":1,\"target\":2,\"data\":\"connected\"}]}"
+
+  let path = "test_read.json"
+  let assert Ok(_) = simplifile.write(path, json_str)
+
+  let assert Ok(graph) = yog_json.read_with(path, decode.string, decode.string)
+
+  dict.size(graph.nodes) |> should.equal(2)
+  model.edge_count(graph) |> should.equal(1)
+  graph.kind |> should.equal(Undirected)
+
+  let _ = simplifile.delete(path)
 }
