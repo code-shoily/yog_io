@@ -17,6 +17,7 @@ yog = ">= 5.1.1 and < 6.0.0"
 
 [dev_dependencies]
 gleeunit = ">= 1.0.0 and < 2.0.0"
+qcheck = ">= 1.0.0 and < 2.0.0"
 
 [javascript]
 typescript_declarations = true
