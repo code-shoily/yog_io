@@ -49,9 +49,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Testing
 
-- Increased test suite to **181 tests**.
+- Increased test suite to **202 tests** (+21).
+- Added **property-based tests** using `qcheck` for all formats.
+  - 15 new property tests covering roundtrip invariants.
+  - Structural equality verification for GraphML, JSON, and GDF.
+  - Node/edge count preservation tests for all formats.
+  - Graph type preservation and undirected symmetry tests.
+  - Random graph generators: arbitrary, path, star, empty, single-node.
+  - See [PROPERTY_TESTS.md](PROPERTY_TESTS.md) for detailed documentation.
+- Added `test/yog_io/generators.gleam` - Graph generators for property testing.
+- Added `test/yog_io/property_test.gleam` - Property-based test suite.
 - Added dedicated unit tests for `list`, `matrix`, and `matrix_market` modules.
 - Added roundtrip and sample-based integration tests for all new formats.
+
+### Fixed
+
+- Fixed `pretty` option in JSON module to actually produce formatted output.
+  - Added `pretty_print_json/1` helper for JSON pretty printing.
+  - Applied to both `to_json/2` and `to_json_multi/2`.
 
 ## [1.0.0] -  2026-03-22
 
