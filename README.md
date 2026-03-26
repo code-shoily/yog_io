@@ -701,6 +701,38 @@ Run a specific test function:
 ./test_module.sh yog_io/json_test to_json_generic_format_test
 ```
 
+### Property-Based Tests
+
+In addition to traditional example-based tests, `yog_io` includes property-based tests using [qcheck](https://hex.pm/packages/qcheck). These tests generate random graphs and verify roundtrip invariants:
+
+```bash
+# Run all tests (including property tests)
+gleam test
+
+# Run specific property test
+gleam test yog_io@property_test.graphml_structural_roundtrip_property_test
+```
+
+**Key Properties Verified:**
+
+| Property | Description |
+|----------|-------------|
+| Structural Equality | Complete graph topology preserved (GraphML, JSON) |
+| Node Count | Number of nodes unchanged after roundtrip |
+| Edge Count | Number of edges unchanged after roundtrip |
+| Graph Type | Directed/Undirected property maintained |
+| Undirected Symmetry | For undirected graphs, edge(u,v) implies edge(v,u) |
+
+**Format Limitations:**
+
+Not all formats support complete structural equality:
+
+- **Full Support**: GraphML, JSON (Generic format)
+- **Partial Support**: GDF (empty graphs), TGF (auto-node creation)
+- **No Support**: LEDA, Pajek (node IDs renumbered to 1, 2, 3...)
+
+See [PROPERTY_TESTS.md](PROPERTY_TESTS.md) for detailed documentation on invariants, hypotheses, and limitations.
+
 ### Running Examples
 
 Run all examples at once:
