@@ -3,5 +3,3 @@
 /build
 erl_crash.dump
 output/
-*.graphml
-*.gdf
