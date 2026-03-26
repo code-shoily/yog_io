@@ -1,17 +1,14 @@
-//// JSON format export for graph data exchange (WRITE-ONLY).
+//// JSON format for graph data exchange.
 ////
-//// This module provides comprehensive JSON export capabilities for graph data,
+//// This module provides comprehensive JSON I/O capabilities for graph data,
 //// supporting multiple formats used by popular visualization libraries.
-////
-//// **Note:** This module currently supports WRITE operations only. Import/read
-//// functionality is not implemented. For bidirectional I/O, consider using
-//// GraphML, GDF, TGF, LEDA, or Pajek formats.
 ////
 //// ## Features
 ////
-//// - **Generic types** for nodes and edges (not just Strings)
-//// - **Multiple JSON formats** (D3.js, Cytoscape.js, vis.js, etc.)
-//// - **File write operations** (export JSON files directly)
+//// - **Generic types** for nodes and edges
+//// - **Reading and Writing** support for Generic format
+//// - **Multiple JSON export formats** (D3.js, Cytoscape.js, vis.js, etc.)
+//// - **File operations** (read/write JSON files directly)
 //// - **Rich metadata** support (graph properties, rendering hints)
 //// - **Format validation** and error reporting
 ////
@@ -56,6 +53,7 @@
 //// - [vis.js](https://visjs.github.io/vis-network/)
 
 import gleam/dict.{type Dict}
+import gleam/dynamic/decode
 import gleam/function
 import gleam/int
 import gleam/json
@@ -365,6 +363,166 @@ pub fn write_with(
   graph: Graph(n, e),
 ) -> Result(Nil, JsonError) {
   to_json_file(graph, path, options)
+}
+
+// =============================================================================
+// READING / DESERIALIZATION
+// =============================================================================
+
+/// Reads a graph from a JSON file using default options.
+///
+/// This currently supports only the `Generic` format (`yog-generic`).
+pub fn read(path: String) -> Result(Graph(String, String), JsonError) {
+  simplifile.read(path)
+  |> result.map_error(fn(err) { ReadError(path, string.inspect(err)) })
+  |> result.try(from_json)
+}
+
+/// Reads a multigraph from a JSON file using default options.
+pub fn read_multi(
+  path: String,
+) -> Result(multi.MultiGraph(String, String), JsonError) {
+  simplifile.read(path)
+  |> result.map_error(fn(err) { ReadError(path, string.inspect(err)) })
+  |> result.try(from_json_multi)
+}
+
+/// Reads a graph from a JSON file with custom data decoders.
+pub fn read_with(
+  path: String,
+  node_decoder: decode.Decoder(n),
+  edge_decoder: decode.Decoder(e),
+) -> Result(Graph(n, e), JsonError) {
+  simplifile.read(path)
+  |> result.map_error(fn(err) { ReadError(path, string.inspect(err)) })
+  |> result.try(fn(s) { from_json_with(s, node_decoder, edge_decoder) })
+}
+
+/// Reads a multigraph from a JSON file with custom data decoders.
+pub fn read_multi_with(
+  path: String,
+  node_decoder: decode.Decoder(n),
+  edge_decoder: decode.Decoder(e),
+) -> Result(multi.MultiGraph(n, e), JsonError) {
+  simplifile.read(path)
+  |> result.map_error(fn(err) { ReadError(path, string.inspect(err)) })
+  |> result.try(fn(s) { from_json_multi_with(s, node_decoder, edge_decoder) })
+}
+
+/// Parses a graph from a JSON string representation.
+pub fn from_json(
+  json_string: String,
+) -> Result(Graph(String, String), JsonError) {
+  from_json_with(json_string, decode.string, decode.string)
+}
+
+/// Parses a multigraph from a JSON string representation.
+pub fn from_json_multi(
+  json_string: String,
+) -> Result(multi.MultiGraph(String, String), JsonError) {
+  from_json_multi_with(json_string, decode.string, decode.string)
+}
+
+/// Parses a graph from a JSON string with custom data decoders.
+///
+/// This function supports the standard `yog-generic` JSON format.
+pub fn from_json_with(
+  json_string: String,
+  node_data_decoder: decode.Decoder(n),
+  edge_data_decoder: decode.Decoder(e),
+) -> Result(Graph(n, e), JsonError) {
+  let main_decoder = {
+    use format <- decode.field("format", decode.string)
+    case format {
+      "yog-generic" -> {
+        use meta <- decode.field("metadata", build_metadata_decoder())
+        use nodes <- decode.field(
+          "nodes",
+          decode.list(decode_node(node_data_decoder)),
+        )
+        use edges <- decode.field(
+          "edges",
+          decode.list(decode_edge(edge_data_decoder)),
+        )
+        decode.success(#(meta, nodes, edges))
+      }
+      fmt -> decode.failure(#(GenericMetadata("", False), [], []), fmt)
+    }
+  }
+
+  json.parse(from: json_string, using: main_decoder)
+  |> result.map_error(fn(err) { InvalidJson(string.inspect(err)) })
+  |> result.try(fn(data) {
+    let #(meta, nodes, edges) = data
+    let kind = case meta.graph_type {
+      "undirected" -> Undirected
+      _ -> Directed
+    }
+
+    let graph =
+      list.fold(nodes, model.new(kind), fn(g, n) {
+        model.add_node(g, n.id, n.data)
+      })
+
+    list.try_fold(edges, graph, fn(g, e) {
+      model.add_edge(g, from: e.source, to: e.target, with: e.data)
+      |> result.map_error(fn(err) {
+        InvalidJson("Edge creation error: " <> err)
+      })
+    })
+  })
+}
+
+/// Parses a multigraph from a JSON string with custom data decoders.
+///
+/// This function supports the standard `yog-generic` JSON format.
+pub fn from_json_multi_with(
+  json_string: String,
+  node_data_decoder: decode.Decoder(n),
+  edge_data_decoder: decode.Decoder(e),
+) -> Result(multi.MultiGraph(n, e), JsonError) {
+  let main_decoder = {
+    use format <- decode.field("format", decode.string)
+    case format {
+      "yog-generic" -> {
+        use meta <- decode.field("metadata", build_metadata_decoder())
+        use nodes <- decode.field(
+          "nodes",
+          decode.list(decode_node(node_data_decoder)),
+        )
+        use edges <- decode.field(
+          "edges",
+          decode.list(decode_edge(edge_data_decoder)),
+        )
+        decode.success(#(meta, nodes, edges))
+      }
+      fmt -> decode.failure(#(GenericMetadata("", False), [], []), fmt)
+    }
+  }
+
+  json.parse(from: json_string, using: main_decoder)
+  |> result.map_error(fn(err) { InvalidJson(string.inspect(err)) })
+  |> result.try(fn(data) {
+    let #(meta, nodes, edges) = data
+    let kind = case meta.graph_type {
+      "undirected" -> Undirected
+      _ -> Directed
+    }
+
+    let graph =
+      list.fold(nodes, multi.new(kind), fn(g, n) {
+        multi.add_node(g, n.id, n.data)
+      })
+
+    let #(final_graph, _) =
+      list.fold(edges, #(graph, 0), fn(acc, e) {
+        let #(g, next_id) = acc
+        let #(new_g, _) =
+          multi.add_edge(g, from: e.source, to: e.target, with: e.data)
+        #(new_g, next_id + 1)
+      })
+    Ok(final_graph)
+  })
 }
 
 // ===== Internal Format Converters =====
@@ -1204,4 +1362,42 @@ fn build_metadata_multi(
   }
 
   json.object(with_custom)
+}
+
+// ===== Internal Decoding =====
+
+type GenericMetadata {
+  GenericMetadata(graph_type: String, multigraph: Bool)
+}
+
+type GenericNode(n) {
+  GenericNode(id: Int, data: n)
+}
+
+type GenericEdge(e) {
+  GenericEdge(id: Option(Int), source: Int, target: Int, data: e)
+}
+
+fn build_metadata_decoder() -> decode.Decoder(GenericMetadata) {
+  use graph_type <- decode.field("graph_type", decode.string)
+  use multigraph <- decode.optional_field("multigraph", False, decode.bool)
+  decode.success(GenericMetadata(graph_type, multigraph))
+}
+
+fn decode_node(
+  data_decoder: decode.Decoder(n),
+) -> decode.Decoder(GenericNode(n)) {
+  use id <- decode.field("id", decode.int)
+  use data <- decode.field("data", data_decoder)
+  decode.success(GenericNode(id, data))
+}
+
+fn decode_edge(
+  data_decoder: decode.Decoder(e),
+) -> decode.Decoder(GenericEdge(e)) {
+  use id <- decode.optional_field("id", None, decode.optional(decode.int))
+  use source <- decode.field("source", decode.int)
+  use target <- decode.field("target", decode.int)
+  use data <- decode.field("data", data_decoder)
+  decode.success(GenericEdge(id, source, target, data))
 }
